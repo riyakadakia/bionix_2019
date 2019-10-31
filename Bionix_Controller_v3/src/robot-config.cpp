@@ -140,9 +140,11 @@ int rc_auto_loop_callback_Controller1() {
 
     // check the X/B buttons status to control StackerMotor
     if (Controller1.ButtonX.pressing()) {
+      StackerMotor.setVelocity(25, percentUnits::pct);
       StackerMotor.spin(forward);
       Controller1XBButtonsControlMotorsStopped = false;
     } else if (Controller1.ButtonB.pressing()) {
+      StackerMotor.setVelocity(25, percentUnits::pct);
       StackerMotor.spin(reverse);
       Controller1XBButtonsControlMotorsStopped = false;
     } else if (!Controller1XBButtonsControlMotorsStopped){
