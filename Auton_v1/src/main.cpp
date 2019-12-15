@@ -39,7 +39,8 @@ const float WHEEL_DIAMETER = 4.125; // inches
 const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
-const float TURNING_DIAMETER = 21.21; // turning diameter or diagonal distance between the wheels
+const float TURNING_DIAMETER = 17.5; // turning diameter or diagonal distance between the wheels
+const int TICKS_PER_LOOP = 70; // number of ticks to rotate the motor in each loop
 
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
@@ -292,10 +293,10 @@ void moveRobot(float inches, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksLFM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveLFMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLFMTicks = TICKS_PER_LOOP;
             } else {
               moveLFMTicks = remainingTicks;
             }
@@ -313,10 +314,10 @@ void moveRobot(float inches, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksLBM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveLBMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLBMTicks = TICKS_PER_LOOP;
             } else {
               moveLBMTicks = remainingTicks;
             }
@@ -334,10 +335,10 @@ void moveRobot(float inches, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksRBM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveRBMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRBMTicks = TICKS_PER_LOOP;
             } else {
               moveRBMTicks = remainingTicks;
             }
@@ -355,18 +356,34 @@ void moveRobot(float inches, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksRFM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveRFMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRFMTicks = TICKS_PER_LOOP;
             } else {
               moveRFMTicks = remainingTicks;
             }
 
             // rotateFor(moveTicks, raw, false)
             RightFrontMotor.rotateFor(moveRFMTicks, vex::rotationUnits::raw, false);
-          }               
-     
+          }
+
+          /*
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 3,000 ticks per second (for 900 ticks/revolution)
+
+              @ 100% speed
+              1 inch = 69.44 ticks => 0.023146 seconds => 23.146 ms
+              TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                             will take TICKS_PER_LOOP*0.333 msec
+
+              @ 75% speed
+              TICKS_PER_LOOP will take TICKS_PER_LOOP*0.33333/(75/100) msec 
+                             will take TICKS_PER_LOOP*33.333/75 msec
+                                       
+          */ 
+          wait(TICKS_PER_LOOP*33.333/speed, msec);
     }
     // We are done moving the robot
 }
@@ -470,30 +487,30 @@ int main() {
   vexcodeInit();
   
   // Set the starting position of the robot
-  setStartingPosition();
+  //setStartingPosition();
 
   // Move the robot 36" at 75% speed
   moveRobot(36, 75); 
 
   // Move the arm motor 30 degrees at 50% speed
-  moveArms(30, 50);
+  //moveArms(30, 50);
 
   // Move the claws 45 degrees at 80% speed
-  moveClaws(45, 80);
+  //moveClaws(45, 80);
   
   // Move the stacker 30 degrees at 90% speed
-  moveStacker(30, 90);
+  //moveStacker(30, 90);
 
   // Start spinning the claws for intake (1) at 80% speed
-  startSpinningClaws(1, 80);
+  //startSpinningClaws(1, 80);
 
-  wait(5, seconds);
+  //wait(5, seconds);
 
   // Stop spinning the claws
-  stopSpinningClaws();
+  //stopSpinningClaws();
 
   // Turn the robot right by 45 degrees at 25% speed
-  turnRobot(45, 25);
+  //turnRobot(45, 25);
 
 }
 
