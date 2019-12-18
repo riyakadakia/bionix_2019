@@ -40,7 +40,7 @@ const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
 const float TURNING_DIAMETER = 17.5; // turning diameter or diagonal distance between the wheels
-const int TICKS_PER_LOOP = 70; // number of ticks to rotate the motor in each loop
+const int TICKS_PER_LOOP = 450; // number of ticks to rotate the motor in each loop
 
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
@@ -84,6 +84,33 @@ int convertDegreesIntoTicks_36(float degrees) {
     // 1,800 ticks per revolution for 18:1 gear ratio
     double ticks = TICKS_PER_REVOLUTION_36*degrees/360;
     return ticks;  
+}
+
+/**
+**/
+void logTextClearScreen(const std::string& str)
+{
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print(str.c_str());
+}
+
+/**
+**/
+void logText(const std::string& str)
+{
+  Controller1.Screen.newLine();
+  Controller1.Screen.print(str.c_str());
+}
+
+/**
+**/
+void logText(const std::string& str, double d)
+{
+  Controller1.Screen.newLine();
+  Controller1.Screen.print(str.c_str());
+  Controller1.Screen.newLine(); 
+  Controller1.Screen.print("%lf", d);
 }
 
 /** 
@@ -284,7 +311,7 @@ void moveRobot(float inches, int speed)
     while (ticksLFM < ticks || ticksRFM < ticks || 
            ticksLBM < ticks || ticksRBM < ticks) {
       
-          if (ticksLFM < ticks && !LeftFrontMotor.isSpinning()) {
+          if (ticksLFM < ticks) {
             double moveLFMTicks = 0;
 
             // read the counter value
@@ -305,7 +332,7 @@ void moveRobot(float inches, int speed)
             LeftFrontMotor.rotateFor(moveLFMTicks, vex::rotationUnits::raw, false);
           }
 
-          if (ticksLBM < ticks && !LeftBackMotor.isSpinning()) {
+          if (ticksLBM < ticks) {
             double moveLBMTicks = 0;
 
             // read the counter value
@@ -326,7 +353,7 @@ void moveRobot(float inches, int speed)
             LeftBackMotor.rotateFor(moveLBMTicks, vex::rotationUnits::raw, false);
           }
 
-          if (ticksRBM < ticks && !RightBackMotor.isSpinning()) {
+          if (ticksRBM < ticks) {
             double moveRBMTicks = 0;
 
             // read the counter value
@@ -347,7 +374,7 @@ void moveRobot(float inches, int speed)
             RightBackMotor.rotateFor(moveRBMTicks, vex::rotationUnits::raw, false);
           }   
 
-          if (ticksRFM < ticks && !RightFrontMotor.isSpinning()) {
+          if (ticksRFM < ticks) {
             double moveRFMTicks = 0;
 
             // read the counter value
@@ -490,7 +517,7 @@ int main() {
   //setStartingPosition();
 
   // Move the robot 36" at 75% speed
-  moveRobot(36, 75); 
+  moveRobot(36, 20); 
 
   // Move the arm motor 30 degrees at 50% speed
   //moveArms(30, 50);
