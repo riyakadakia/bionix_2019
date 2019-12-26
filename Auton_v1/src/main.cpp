@@ -40,7 +40,9 @@ const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
 const float TURNING_DIAMETER = 17.5; // turning diameter or diagonal distance between the wheels
-const int TICKS_PER_LOOP = 450; // number of ticks to rotate the motor in each loop
+const int TICKS_PER_LOOP = 450; // number of ticks to rotate the base motors in each loop
+const int TICKS_PER_LOOP_STACKER = 50; // number of ticks to rotate the stacker motor in each loop
+const int TICKS_PER_LOOP_ARM = 50; //number of ticks to rotate the arm motor in each loop
 
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
@@ -69,7 +71,7 @@ double convertInchesIntoTicks_36(float inches) {
   depending on the ticks for motor with gear ratio of 18:1 and wheel of 4.125" diameter
 **/
 int convertDegreesIntoTicks_18(float degrees) {
-    // Convert inches into ticks (based on gear ratio)
+    // Convert degrees into ticks (based on gear ratio)
     // 900 ticks per revolution for 18:1 gear ratio
     double ticks = TICKS_PER_REVOLUTION_18*degrees/360;
     return ticks;  
@@ -80,8 +82,8 @@ int convertDegreesIntoTicks_18(float degrees) {
   depending on the ticks for motor with gear ratio of 36:1 and wheel of 4.125" diameter
 **/
 int convertDegreesIntoTicks_36(float degrees) {
-    // Convert inches into ticks (based on gear ratio)
-    // 1,800 ticks per revolution for 18:1 gear ratio
+    // Convert degrees into ticks (based on gear ratio)
+    // 1,800 ticks per revolution for 36:1 gear ratio
     double ticks = TICKS_PER_REVOLUTION_36*degrees/360;
     return ticks;  
 }
@@ -121,7 +123,7 @@ void logText(const std::string& str, double d)
 **/
 void moveArms(float degrees, int speed)
 {
-    // 1. Convert inches into ticks
+    // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
 
     // 2. Set the initial motor encoder counter to 0
@@ -145,10 +147,10 @@ void moveArms(float degrees, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksAM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP_ARM(50), set moveTicks (variable) = TICKS_PER_LOOP_ARM
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveAMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP_ARM) {
+              moveAMTicks = TICKS_PER_LOOP_ARM;
             } else {
               moveAMTicks = remainingTicks;
             }
@@ -156,6 +158,20 @@ void moveArms(float degrees, int speed)
             // rotateFor(moveTicks, raw, false)
             ArmMotor.rotateFor(moveAMTicks, vex::rotationUnits::raw, false);
           }
+          /* 
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 6,000 ticks per second (for 1800 ticks/revolution)
+
+              @ 100% speed
+              50 ticks(TICKS_PER_LOOP_ARM) => 50/6000 s = 8.333 ms
+              
+              @ 75% speed
+              50 ticks(TICKS_PER_LOOP_ARM) => 8.333 ms * 100 / 75 = 11.108 ms
+
+              50 ticks(TICKS_PER_LOOP_ARM) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+          */
+          wait(TICKS_PER_LOOP_ARM*1.667/speed, msec);
     }
     // We are done moving the arms  
 }
@@ -168,7 +184,7 @@ void moveArms(float degrees, int speed)
 **/
 void moveStacker(float degrees, int speed)
 {
-    // 1. Convert inches into ticks
+    // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
 
     // 2. Set the initial motor encoder counters to 0
@@ -192,17 +208,31 @@ void moveStacker(float degrees, int speed)
             // calculate remainingTicks to move
             double remainingTicks = ticks - ticksSM;
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
+            // if remainingTicks > TICKS_PER_LOOP_STACKER(50), set moveTicks (variable) = TICKS_PER_LOOP_STACKER
             // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveSMTicks = 50;
+            if (remainingTicks > TICKS_PER_LOOP_STACKER) {
+              moveSMTicks = TICKS_PER_LOOP_STACKER;
             } else {
               moveSMTicks = remainingTicks;
             }
 
             // rotateFor(moveTicks, raw, false)
-            ArmMotor.rotateFor(moveSMTicks, vex::rotationUnits::raw, false);
+            StackerMotor.rotateFor(moveSMTicks, vex::rotationUnits::raw, false);
           }
+          /* 
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 6,000 ticks per second (for 1800 ticks/revolution)
+
+              @ 100% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50/6000 s = 8.333 ms
+              
+              @ 75% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 8.333 ms * 100 / 75 = 11.108 ms
+
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+          */
+          wait(TICKS_PER_LOOP_STACKER*1.667/speed, msec);
     }
     // We are done moving the stacker  
 }
@@ -406,6 +436,7 @@ void moveRobot(float inches, int speed)
                              will take TICKS_PER_LOOP*0.333 msec
 
               @ 75% speed
+              1 inch = 69.44 ticks => 0.030862 seconds => 30.862 ms
               TICKS_PER_LOOP will take TICKS_PER_LOOP*0.33333/(75/100) msec 
                              will take TICKS_PER_LOOP*33.333/75 msec
                                        
