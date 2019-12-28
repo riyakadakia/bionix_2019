@@ -1,3 +1,16 @@
+// ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// RightClawMotor       motor         3               
+// ArmMotor             motor         6               
+// StackerMotor         motor         7               
+// LeftClawMotor        motor         8               
+// RightFrontMotor      motor         9               
+// LeftFrontMotor       motor         10              
+// RightBackMotor       motor         1               
+// LeftBackMotor        motor         2               
+// Controller1          controller                    
+// ---- END VEXCODE CONFIGURED DEVICES ----
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
@@ -160,19 +173,19 @@ void moveArms(float degrees, int speed)
             ArmMotor.rotateFor(moveAMTicks, vex::rotationUnits::raw, false);
           }
           /* 
-              Motor rotates at 200rpm @ 100% speed
-              => 3.33 rps (revolutions per second)
-              => 6,000 ticks per second (for 1800 ticks/revolution)
+              Motor rotates at 100rpm @ 100% speed
+              => 1.667 rps (revolutions per second)
+              => 3000 ticks per second (for 1800 ticks/revolution)
 
               @ 100% speed
-              50 ticks(TICKS_PER_LOOP_ARM) => 50/6000 s = 8.333 ms
+              2000 ticks(TICKS_PER_LOOP_ARM) => 2000/3000 s = 666.667 ms
               
               @ 75% speed
-              50 ticks(TICKS_PER_LOOP_ARM) => 8.333 ms * 100 / 75 = 11.108 ms
+              2000 ticks(TICKS_PER_LOOP_ARM) => 666.667 ms * 100 / 75 = 888.889 ms
 
-              50 ticks(TICKS_PER_LOOP_ARM) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+              2000 ticks(TICKS_PER_LOOP_ARM) => 2000 * 100 / 3 / speed ms = 2000 * 33.33 / speed ms
           */
-          wait(TICKS_PER_LOOP_ARM*1.667/speed, msec);
+          wait(TICKS_PER_LOOP_ARM * 33.33 / speed, msec);
     }
     // We are done moving the arms  
 }
@@ -221,19 +234,19 @@ void moveStacker(float degrees, int speed)
             StackerMotor.rotateFor(moveSMTicks, vex::rotationUnits::raw, false);
           }
           /* 
-              Motor rotates at 200rpm @ 100% speed
-              => 3.33 rps (revolutions per second)
-              => 6,000 ticks per second (for 1800 ticks/revolution)
+              Motor rotates at 100rpm @ 100% speed
+              => 1.667 rps (revolutions per second)
+              => 3000 ticks per second (for 1800 ticks/revolution)
 
               @ 100% speed
-              50 ticks(TICKS_PER_LOOP_STACKER) => 50/6000 s = 8.333 ms
+              2000 ticks(TICKS_PER_LOOP_STACKER) => 2000/3000 s = 666.667 ms
               
               @ 75% speed
-              50 ticks(TICKS_PER_LOOP_STACKER) => 8.333 ms * 100 / 75 = 11.108 ms
+              2000 ticks(TICKS_PER_LOOP_STACKER) => 666.667 ms * 100 / 75 = 888.889 ms
 
-              50 ticks(TICKS_PER_LOOP_STACKER) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+              2000 ticks(TICKS_PER_LOOP_STACKER) => 2000 * 100 / 3 / speed ms = 2000 * 33.33 / speed ms
           */
-          wait(TICKS_PER_LOOP_STACKER*1.667/speed, msec);
+          wait(TICKS_PER_LOOP_STACKER * 33.33 / speed, msec);
     }
     // We are done moving the stacker  
 }
