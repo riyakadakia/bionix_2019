@@ -8,6 +8,10 @@
 /*----------------------------------------------------------------------------*/
 
 // ---- START VEXCODE CONFIGURED DEVICES ----
+// Robot Configuration:
+// [Name]               [Type]        [Port(s)]
+// ArmMotor             motor         6               
+// StackerMotor         motor         7               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -30,6 +34,191 @@ competition Competition;
 /*  function is only called once after the V5 has been powered on and        */
 /*  not every time that the robot is disabled.                               */
 /*---------------------------------------------------------------------------*/
+const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
+const int TICKS_PER_LOOP_ARM = 2000; //number of ticks to rotate the arm motor in each loop
+const int TICKS_PER_LOOP_STACKER = 2000; // number of ticks to rotate the stacker motor in each loop
+const int TICKS_PER_LOOP_STACKER_DOWN = -2000;
+
+int convertDegreesIntoTicks_36(float degrees) {
+    // Convert degrees into ticks (based on gear ratio)
+    // 1,800 ticks per revolution for 36:1 gear ratio
+    double ticks = TICKS_PER_REVOLUTION_36*degrees/360;
+    return ticks;  
+}
+
+
+void moveStackerUp(float degrees, int speed)
+{
+    // 1. Convert degrees into ticks
+    double ticks = convertDegreesIntoTicks_36(degrees);
+
+    // 2. Set the initial motor encoder counters to 0
+    StackerMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motor to 'speed'
+    StackerMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variable and set it to 0
+    double ticksSM = 0;
+
+    // 5. Loop - while (counter variable < ticks)
+    while (ticksSM < ticks) {
+      
+          if (ticksSM < ticks) {
+            double moveSMTicks = 0;
+
+            // read the counter value
+            ticksSM = StackerMotor.rotation(vex::rotationUnits::raw);
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksSM;
+
+            // if remainingTicks > TICKS_PER_LOOP_STACKER(50), set moveTicks (variable) = TICKS_PER_LOOP_STACKER
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP_STACKER) {
+              moveSMTicks = TICKS_PER_LOOP_STACKER;
+            } else {
+              moveSMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            StackerMotor.rotateFor(moveSMTicks, vex::rotationUnits::raw, false);
+          }
+          /* 
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 6,000 ticks per second (for 1800 ticks/revolution)
+
+              @ 100% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50/6000 s = 8.333 ms
+              
+              @ 75% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 8.333 ms * 100 / 75 = 11.108 ms
+
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+          */
+          wait(TICKS_PER_LOOP_STACKER*1.667/speed, msec);
+    }
+    // We are done moving the stacker  
+}
+
+void moveStackerDown(float degrees, int speed)
+{
+    // 1. Convert degrees into ticks
+    double ticks = convertDegreesIntoTicks_36(degrees);
+
+    // 2. Set the initial motor encoder counters to 0
+    StackerMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motor to 'speed'
+    StackerMotor.setVelocity(speed, velocityUnits::pct);
+   
+    // 4. Create counter variable and set it to 0
+    double ticksSM = 0;
+
+    // 5. Loop - while (counter variable < ticks)
+    while (ticksSM > ticks) {
+      
+          if (ticksSM > ticks) {
+            double moveSMTicks = 0;
+
+            // read the counter value
+          
+            ticksSM = StackerMotor.rotation(vex::rotationUnits::raw);
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksSM;
+
+            // if remainingTicks > TICKS_PER_LOOP_STACKER(50), set moveTicks (variable) = TICKS_PER_LOOP_STACKER
+            // else set moveTicks = remainingTicks
+            if (remainingTicks < TICKS_PER_LOOP_STACKER_DOWN) {
+              moveSMTicks = TICKS_PER_LOOP_STACKER_DOWN;
+            } else {
+              moveSMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            
+            StackerMotor.rotateFor(moveSMTicks, vex::rotationUnits::raw, false);
+          }
+          /* 
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 6,000 ticks per second (for 1800 ticks/revolution)
+
+              @ 100% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50/6000 s = 8.333 ms
+              
+              @ 75% speed
+              50 ticks(TICKS_PER_LOOP_STACKER) => 8.333 ms * 100 / 75 = 11.108 ms
+
+              50 ticks(TICKS_PER_LOOP_STACKER) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+          */
+          wait(TICKS_PER_LOOP_STACKER_DOWN*1.667/speed, msec);
+    }
+    // We are done moving the stacker  
+}
+
+
+void moveArms(float degrees, int speed)
+{
+    // 1. Convert degrees into ticks
+    double ticks = convertDegreesIntoTicks_36(degrees);
+    double ticksAM = 0;
+
+    // 2. Set the initial motor encoder counter to 0
+    ArmMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motor to 'speed'
+    ArmMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variable and set it to 0
+    
+
+    // 5. Loop - while (counter variable < ticks)
+    while (ticksAM < ticks) {
+      
+          if (ticksAM < ticks && !ArmMotor.isSpinning()) {
+            double moveAMTicks = 0;
+
+            // read the counter value
+            ticksAM = ArmMotor.rotation(vex::rotationUnits::raw);
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksAM;
+
+            // if remainingTicks > TICKS_PER_LOOP_ARM(50), set moveTicks (variable) = TICKS_PER_LOOP_ARM
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP_ARM) {
+              moveAMTicks = TICKS_PER_LOOP_ARM;
+            } else {
+              moveAMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            ArmMotor.rotateFor(moveAMTicks, vex::rotationUnits::raw, false);
+          }
+          /* 
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 6,000 ticks per second (for 1800 ticks/revolution)
+
+              @ 100% speed
+              50 ticks(TICKS_PER_LOOP_ARM) => 50/6000 s = 8.333 ms
+              
+              @ 75% speed
+              50 ticks(TICKS_PER_LOOP_ARM) => 8.333 ms * 100 / 75 = 11.108 ms
+
+              50 ticks(TICKS_PER_LOOP_ARM) => 50 * 100 / 60 /speed ms = 50 * 1.667 / speed ms
+          */
+          wait(TICKS_PER_LOOP_ARM*1.667/speed, msec);
+    }
+    // We are done moving the arms  
+}
+
+
+
+
 
 void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
@@ -140,10 +329,13 @@ void usercontrol(void) {
   bool Controller1RightShoulderControlMotorsStopped = true;
   bool Controller1UpDownButtonsControlMotorsStopped = true;
   bool Controller1XBButtonsControlMotorsStopped = true;
+  bool ControllerLeftButton = true;
+  bool ControllerRightButton = true;
+  bool ControllerAButton = true;
+  bool ControllerYButton = true;
   bool DrivetrainLeftNeedsToBeStopped_Controller1 = true;
   bool DrivetrainRightNeedsToBeStopped_Controller1 = true;
-  bool Controller1forwardStopped = true;
-  bool Controller1backwardsStopped = true;
+  
 
   // User control code here, inside the loop
   while (1) {
@@ -212,7 +404,7 @@ void usercontrol(void) {
     }
 
 // Ignore this part i was just testing something
-   /* if (Controller1.ButtonR1.pressing()) {
+    /*if (Controller1.ButtonR1.pressing()) {
           RightClawMotor.setVelocity(100, pct);
           RightClawMotor.spin(forward);
 
@@ -229,8 +421,27 @@ void usercontrol(void) {
           // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
           Controller1RightShoulderControlMotorsStopped = true;
         }
+*/
 
     if (Controller1.ButtonL1.pressing()) {
+              RightClawMotor.setVelocity(100, pct);
+              RightClawMotor.spin(forward);
+
+              LeftClawMotor.setVelocity(100, pct);
+              LeftClawMotor.spin(forward);
+              
+              Controller1LeftShoulderControlMotorsStopped = false;
+
+              Controller1RightShoulderControlMotorsStopped = false;
+
+            } else if (!Controller1RightShoulderControlMotorsStopped) {
+              RightClawMotor.stop();
+              LeftClawMotor.stop();
+              // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+              Controller1RightShoulderControlMotorsStopped = true;
+            }
+    
+    if (Controller1.ButtonR1.pressing()) {
           RightClawMotor.setVelocity(100, pct);
           RightClawMotor.spin(reverse);
 
@@ -248,36 +459,48 @@ void usercontrol(void) {
           Controller1RightShoulderControlMotorsStopped = true;
         }
     
-*/
-       
-    // check the ButtonR1/ButtonR2 status to control LeftClawMotor
-    if (Controller1.ButtonR1.pressing()) {
-      RightClawMotor.setVelocity(100, pct);
-      RightClawMotor.spin(forward);
-      Controller1RightShoulderControlMotorsStopped = false;
-    } else if (Controller1.ButtonR2.pressing()) {
-      RightClawMotor.setVelocity(20, pct);
-      RightClawMotor.spin(reverse);
-      Controller1RightShoulderControlMotorsStopped = false;
-    } else if (!Controller1RightShoulderControlMotorsStopped) {
-      RightClawMotor.stop();
-      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-      Controller1RightShoulderControlMotorsStopped = true;
-    }
 
-    if (Controller1.ButtonL1.pressing()) {
-      LeftClawMotor.setVelocity(100, pct);
-      LeftClawMotor.spin(forward);
-      Controller1LeftShoulderControlMotorsStopped = false;
-    } else if (Controller1.ButtonL2.pressing()) {
-      LeftClawMotor.setVelocity(20, pct);
-      LeftClawMotor.spin(reverse);
-      Controller1LeftShoulderControlMotorsStopped = false;
-    } else if (!Controller1LeftShoulderControlMotorsStopped) {
-      LeftClawMotor.stop();
-      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-      Controller1LeftShoulderControlMotorsStopped = true;
-    }
+       
+    
+    if (Controller1.ButtonY.pressing()) {
+        moveStackerUp(650, 25);
+        ControllerYButton = false;
+      } else if (!ControllerYButton){
+        StackerMotor.stop();
+        StackerMotor.setBrake(hold);
+        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+        ControllerYButton = true;
+      }
+
+    if (Controller1.ButtonA.pressing()) {
+        moveStackerDown(-650, 100);
+        ControllerAButton = false;
+      } else if (!ControllerAButton){
+        StackerMotor.stop();
+        StackerMotor.setBrake(hold);
+        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+        ControllerAButton = true;
+      }
+    
+    if (Controller1.ButtonLeft.pressing()) {
+        moveArms(400, 50);
+        ControllerLeftButton = false;
+      } else if (!ControllerLeftButton){
+        ArmMotor.stop();
+        ArmMotor.setBrake(hold);
+        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+        ControllerLeftButton = true;
+      }
+
+    if (Controller1.ButtonRight.pressing()) {
+        moveArms(540, 50);
+        ControllerRightButton = false;
+      } else if (!ControllerRightButton){
+        ArmMotor.stop();
+        ArmMotor.setBrake(hold);
+        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+        ControllerRightButton = true;
+      }
 
     // check the Up/Down Buttons status to control ArmMotor
     if (Controller1.ButtonUp.pressing()) {
