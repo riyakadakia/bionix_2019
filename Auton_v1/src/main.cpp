@@ -41,8 +41,8 @@ const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
 const float TURNING_DIAMETER = 17.5; // turning diameter or diagonal distance between the wheels
 const int TICKS_PER_LOOP = 450; // number of ticks to rotate the base motors in each loop
-const int TICKS_PER_LOOP_STACKER = 50; // number of ticks to rotate the stacker motor in each loop
-const int TICKS_PER_LOOP_ARM = 50; //number of ticks to rotate the arm motor in each loop
+const int TICKS_PER_LOOP_STACKER = 2000; // 50 // number of ticks to rotate the stacker motor in each loop
+const int TICKS_PER_LOOP_ARM = 2000; //number of ticks to rotate the arm motor in each loop
 
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
@@ -125,6 +125,7 @@ void moveArms(float degrees, int speed)
 {
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
+    double ticksAM = 0;
 
     // 2. Set the initial motor encoder counter to 0
     ArmMotor.setRotation(0, vex::rotationUnits::raw);
@@ -133,7 +134,7 @@ void moveArms(float degrees, int speed)
     ArmMotor.setVelocity(speed, velocityUnits::pct);
 
     // 4. Create counter variable and set it to 0
-    double ticksAM = 0;
+    
 
     // 5. Loop - while (counter variable < ticks)
     while (ticksAM < ticks) {
@@ -197,7 +198,7 @@ void moveStacker(float degrees, int speed)
     double ticksSM = 0;
 
     // 5. Loop - while (counter variable < ticks)
-    while (ticksSM < ticks && !StackerMotor.isSpinning()) {
+    while (ticksSM < ticks) {
       
           if (ticksSM < ticks) {
             double moveSMTicks = 0;
@@ -548,27 +549,39 @@ int main() {
   //setStartingPosition();
 
   // Move the robot 36" at 75% speed
-  moveRobot(36, 20); 
+  //moveRobot(36, 20); 
+  
 
   // Move the arm motor 30 degrees at 50% speed
   //moveArms(30, 50);
+  //wait(5, seconds);
 
   // Move the claws 45 degrees at 80% speed
   //moveClaws(45, 80);
-  
-  // Move the stacker 30 degrees at 90% speed
-  //moveStacker(30, 90);
-
-  // Start spinning the claws for intake (1) at 80% speed
-  //startSpinningClaws(1, 80);
-
   //wait(5, seconds);
+
+  // Move the stacker 30 degrees at 90% speed
+  //moveStacker(550, 100);
+  //moveArms(400, 50);
+  moveArms(540, 50);
+  moveRobot(5, 5);
+
+  //wait(.1, seconds);
+  //moveRobot(1, 5);
+  //moveStacker(-550, 100);
+  
+  // Start spinning the claws for intake (1) at 80% speed
+ // startSpinningClaws(1, 80);
+
+  wait(5, seconds);
 
   // Stop spinning the claws
   //stopSpinningClaws();
+ 
+  wait(5, seconds);
 
   // Turn the robot right by 45 degrees at 25% speed
-  //turnRobot(45, 25);
+ // turnRobot(45, 25);
 
 }
 
