@@ -1,14 +1,3 @@
-// ---- START VEXCODE CONFIGURED DEVICES ----
-// Robot Configuration:
-// [Name]               [Type]        [Port(s)]
-// ArmMotor             motor         6               
-// StackerMotor         motor         7               
-// ---- END VEXCODE CONFIGURED DEVICES ----
-// ---- START VEXCODE CONFIGURED DEVICES ----
-// Robot Configuration:
-// [Name]               [Type]        [Port(s)]
-// ArmMotor             motor         6               
-// ---- END VEXCODE CONFIGURED DEVICES ----
 /*----------------------------------------------------------------------------*/
 /*                                                                            */
 /*    Module:       main.cpp                                                  */
@@ -22,7 +11,10 @@
 // Robot Configuration:
 // [Name]               [Type]        [Port(s)]
 // ArmMotor             motor         6               
-// StackerMotor         motor         7               
+// StackerMotor         motor         7 
+// Controller1          controller
+// LeftClawMotor        motor         8
+// RightClawMotor       motor         3    
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -50,13 +42,39 @@ const int TICKS_PER_LOOP_ARM = 2000; //number of ticks to rotate the arm motor i
 const int TICKS_PER_LOOP_STACKER = 2000; // number of ticks to rotate the stacker motor in each loop
 const int TICKS_PER_LOOP_STACKER_DOWN = -2000;
 
+/**
+**/
+void logTextClearScreen(const std::string& str)
+{
+  Controller1.Screen.clearScreen();
+  Controller1.Screen.setCursor(1,1);
+  Controller1.Screen.print(str.c_str());
+}
+
+/**
+**/
+void logText(const std::string& str)
+{
+  Controller1.Screen.newLine();
+  Controller1.Screen.print(str.c_str());
+}
+
+/**
+**/
+void logText(const std::string& str, double d)
+{
+  Controller1.Screen.newLine();
+  Controller1.Screen.print(str.c_str());
+  Controller1.Screen.newLine(); 
+  Controller1.Screen.print("%lf", d);
+}
+
 int convertDegreesIntoTicks_36(float degrees) {
     // Convert degrees into ticks (based on gear ratio)
     // 1,800 ticks per revolution for 36:1 gear ratio
     double ticks = TICKS_PER_REVOLUTION_36*degrees/360;
     return ticks;  
 }
-
 
 void moveStackerUp(float degrees, int speed)
 {
@@ -175,7 +193,6 @@ void moveArms(float degrees, int speed)
 {
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
-    double ticksAM = 0;
 
     // 2. Set the initial motor encoder counter to 0
     ArmMotor.setRotation(0, vex::rotationUnits::raw);
@@ -184,12 +201,12 @@ void moveArms(float degrees, int speed)
     ArmMotor.setVelocity(speed, velocityUnits::pct);
 
     // 4. Create counter variable and set it to 0
-    
+    double ticksAM = 0;
 
     // 5. Loop - while (counter variable < ticks)
     while (ticksAM < ticks) {
       
-          if (ticksAM < ticks && !ArmMotor.isSpinning()) {
+          if (ticksAM < ticks) {
             double moveAMTicks = 0;
 
             // read the counter value
@@ -224,12 +241,9 @@ void moveArms(float degrees, int speed)
           */
           wait(TICKS_PER_LOOP_ARM * 33.33 / speed, msec);
     }
-    // We are done moving the arms  
+    // We are done moving the arms  x
+    logText("Done with the moveArms function");
 }
-
-
-
-
 
 void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
@@ -258,16 +272,11 @@ void autonomous(void) {
   brain  Brain;
 
   // VEXcode device constructors
-  controller Controller1 = controller(primary);
   motor RightFrontBaseMotor = motor(PORT9, ratio18_1, false);
   motor LeftFrontBaseMotor = motor(PORT10, ratio18_1, false);
-  motor RightClawMotor = motor(PORT3, ratio18_1, false);
   motor LeftDriveSmart = motor(PORT2, ratio18_1, false);
   motor RightDriveSmart = motor(PORT1, ratio18_1, true);
   //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
-  motor ArmMotor = motor(PORT6, ratio36_1, true);
-  motor StackerMotor = motor(PORT7, ratio36_1, false);
-  motor LeftClawMotor = motor(PORT8, ratio18_1, true);
  
   // Drivetrain.driveFor(forward 1100 ticks
   //Drivetrain.driveFor(reverse 1100 ticks
@@ -319,7 +328,6 @@ void usercontrol(void) {
   brain  Brain;
 
   // VEXcode device constructors
-  controller Controller1 = controller(primary);
   motor LeftBackDriveSmart = motor(PORT2, ratio18_1, false);
   motor LeftFrontDriveSmart = motor(PORT10, ratio18_1, false);
   drivetrain LeftDrivetrain = drivetrain(LeftBackDriveSmart, LeftFrontDriveSmart, 319.19, 295, 130, mm, 1);
@@ -328,16 +336,12 @@ void usercontrol(void) {
   motor RightFrontDriveSmart = motor(PORT9, ratio18_1, true);
   drivetrain RightDrivetrain = drivetrain(RightBackDriveSmart, RightFrontDriveSmart, 319.19, 295, 130, mm, 1);
 
-  motor ArmMotor = motor(PORT6, ratio36_1, true);
-  motor StackerMotor = motor(PORT7, ratio36_1, false);
-
-  motor LeftClawMotor = motor(PORT8, ratio18_1, false);
-  motor RightClawMotor = motor(PORT3, ratio18_1, true);
-
   // VEXcode generated functions
   // define variables used for controlling motors based on controller inputs
-  bool Controller1LeftShoulderControlMotorsStopped = true;
-  bool Controller1RightShoulderControlMotorsStopped = true;
+  //bool Controller1LeftShoulderControlMotorsStopped = true;
+  //bool Controller1RightShoulderControlMotorsStopped = true;
+  bool Controller1L1ButtonMotorsStopped = true;
+  bool Controller1R1ButtonMotorsStopped = true;
   bool Controller1UpDownButtonsControlMotorsStopped = true;
   bool Controller1XBButtonsControlMotorsStopped = true;
   bool ControllerLeftButton = true;
@@ -406,7 +410,6 @@ void usercontrol(void) {
     }
 
     // only tell the right drive motor to spin if the values are not in the deadband range
-
     if (DrivetrainRightNeedsToBeStopped_Controller1) {
       RightBackDriveSmart.setVelocity(drivetrainRightAddSideSpeed, percent);
       RightBackDriveSmart.spin(forward);         
@@ -414,62 +417,37 @@ void usercontrol(void) {
       RightFrontDriveSmart.spin(forward);
     }
 
-// Ignore this part i was just testing something
-    /*if (Controller1.ButtonR1.pressing()) {
-          RightClawMotor.setVelocity(100, pct);
-          RightClawMotor.spin(forward);
-
-          LeftClawMotor.setVelocity(100, pct);
-          LeftClawMotor.spin(forward);
-          
-          Controller1LeftShoulderControlMotorsStopped = false;
-
-          Controller1RightShoulderControlMotorsStopped = false;
-
-        } else if (!Controller1RightShoulderControlMotorsStopped) {
-          RightClawMotor.stop();
-          LeftClawMotor.stop();
-          // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-          Controller1RightShoulderControlMotorsStopped = true;
-        }
-*/
-
     if (Controller1.ButtonL1.pressing()) {
-              RightClawMotor.setVelocity(100, pct);
-              RightClawMotor.spin(forward);
+      RightClawMotor.setVelocity(100, pct);
+      RightClawMotor.spin(forward);
 
-              LeftClawMotor.setVelocity(100, pct);
-              LeftClawMotor.spin(forward);
+      LeftClawMotor.setVelocity(100, pct);
+      LeftClawMotor.spin(forward);
               
-              Controller1LeftShoulderControlMotorsStopped = false;
-              Controller1RightShoulderControlMotorsStopped = false;
-    } else if (!Controller1RightShoulderControlMotorsStopped) {
-              RightClawMotor.stop();
-              LeftClawMotor.stop();
-              // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-              Controller1RightShoulderControlMotorsStopped = true;
-              Controller1LeftShoulderControlMotorsStopped = true;
+      Controller1L1ButtonMotorsStopped = false;
+    } else if (!Controller1L1ButtonMotorsStopped) {
+       RightClawMotor.stop();
+       LeftClawMotor.stop();
+       
+       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+       Controller1L1ButtonMotorsStopped = true;
     }
     
     if (Controller1.ButtonR1.pressing()) {
-          RightClawMotor.setVelocity(100, pct);
-          RightClawMotor.spin(reverse);
+      RightClawMotor.setVelocity(100, pct);
+      RightClawMotor.spin(reverse);
 
-          LeftClawMotor.setVelocity(100, pct);
-          LeftClawMotor.spin(reverse);
+      LeftClawMotor.setVelocity(100, pct);
+      LeftClawMotor.spin(reverse);
           
-          Controller1LeftShoulderControlMotorsStopped = false;
-          Controller1RightShoulderControlMotorsStopped = false;
-    } else if (!Controller1RightShoulderControlMotorsStopped) {
-          RightClawMotor.stop();
-          LeftClawMotor.stop();
-          // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-          Controller1RightShoulderControlMotorsStopped = true;
-          Controller1LeftShoulderControlMotorsStopped = true;
+      Controller1R1ButtonMotorsStopped = false;
+    } else if (!Controller1R1ButtonMotorsStopped) {
+      RightClawMotor.stop();
+      LeftClawMotor.stop();
+      
+      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+      Controller1R1ButtonMotorsStopped = true;
     }
-    
-
-       
     
     if (Controller1.ButtonY.pressing()) {
         moveStackerUp(650, 25);
@@ -540,8 +518,9 @@ void usercontrol(void) {
       Controller1XBButtonsControlMotorsStopped = true;
     }
     // wait before repeating the process
-    wait(20, msec); // Sleep the task for a short amount of time to
-                    // prevent wasted resources.
+    // Sleep the task for a short amount of time to
+    // prevent wasted resources.
+    wait(20, msec);
   }
 }
 
