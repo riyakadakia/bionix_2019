@@ -290,6 +290,8 @@ void usercontrol(void) {
   //bool Controller1RightShoulderControlMotorsStopped = true;
   bool Controller1L1ButtonMotorsStopped = true;
   bool Controller1R1ButtonMotorsStopped = true;
+  bool Controller1R2ButtonMotorsStopped = true;
+  bool Controller1L2ButtonMotorsStopped = true;
   bool Controller1UpDownButtonsControlMotorsStopped = true;
   bool Controller1XBButtonsControlMotorsStopped = true;
   bool ControllerLeftButton = true;
@@ -392,10 +394,51 @@ void usercontrol(void) {
     } else if (!Controller1R1ButtonMotorsStopped) {
       RightClawMotor.stop();
       LeftClawMotor.stop();
-      
       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
       Controller1R1ButtonMotorsStopped = true;
     }
+
+    if (Controller1.ButtonL2.pressing()) {
+      LeftFrontDriveSmart.setVelocity(25, pct);
+      RightFrontDriveSmart.setVelocity(25, pct);
+      RightBackDriveSmart.setVelocity(25, pct);
+      LeftBackDriveSmart.setVelocity(25, pct);
+      LeftFrontDriveSmart.spin(forward);
+      RightFrontDriveSmart.spin(forward);
+      RightBackDriveSmart.spin(forward);
+      LeftBackDriveSmart.spin(forward);
+  
+      Controller1L2ButtonMotorsStopped = false;
+
+    } else if (!Controller1L2ButtonMotorsStopped) {
+      LeftFrontDriveSmart.stop();
+      RightFrontDriveSmart.stop();
+      RightBackDriveSmart.stop();
+      LeftBackDriveSmart.stop();
+      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+      Controller1L2ButtonMotorsStopped = true;
+    }
+
+    if (Controller1.ButtonR2.pressing()) {
+      LeftFrontDriveSmart.setVelocity(100, pct);
+      RightFrontDriveSmart.setVelocity(100, pct);
+      RightBackDriveSmart.setVelocity(100, pct);
+      LeftBackDriveSmart.setVelocity(100, pct);
+      LeftFrontDriveSmart.spin(reverse);
+      RightFrontDriveSmart.spin(reverse);
+      RightBackDriveSmart.spin(reverse);
+      LeftBackDriveSmart.spin(reverse);
+  
+      Controller1R2ButtonMotorsStopped = false;
+
+    } else if (!Controller1R2ButtonMotorsStopped) {
+      LeftFrontDriveSmart.stop();
+      RightFrontDriveSmart.stop();
+      RightBackDriveSmart.stop();
+      LeftBackDriveSmart.stop();
+      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+      Controller1R2ButtonMotorsStopped = true;
+    }    
     
     if (Controller1.ButtonY.pressing()) {
         moveStacker(650, 50, 1);
