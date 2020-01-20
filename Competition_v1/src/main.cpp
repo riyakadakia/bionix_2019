@@ -471,7 +471,7 @@ void usercontrol(void) {
     }    
     
     if (Controller1.ButtonY.pressing()) {
-        moveStacker(650, 50, 1);
+        moveStacker(625, 25, 1);
         ControllerYButton = false;
       } else if (!ControllerYButton){
         StackerMotor.stop();
@@ -482,7 +482,7 @@ void usercontrol(void) {
     
 
     if (Controller1.ButtonA.pressing()) {
-        moveStacker(650, 50, -1);
+        moveStacker(625, 25, -1);
         ControllerAButton = false;
       } else if (!ControllerAButton){
         StackerMotor.stop();
