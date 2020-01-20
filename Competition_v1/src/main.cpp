@@ -40,7 +40,8 @@ competition Competition;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_LOOP_ARM = 2000; // number of ticks to rotate the arm motor in each loop
 const int TICKS_PER_LOOP_STACKER = 2000; // number of ticks to rotate the stacker motor in each loop
-const int MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the loop
+const int MAX_STACKER_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the moveStacker loop
+const int MAX_ARMS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the moveArms loop
 
 /**
 **/
@@ -141,7 +142,7 @@ void moveStacker(float degrees, int speed, int direction)
       wait(moveSMTicks * 33.33 / speed, msec);
       if (ticksSM == lastTicksSM) {
         stackMotorNotMoved++;
-        if (stackMotorNotMoved >= MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+        if (stackMotorNotMoved >= MAX_STACKER_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
           // stack motor has not moved for max retries times. Break out of while loop
           break;
         }
@@ -209,7 +210,7 @@ void moveArms(float degrees, int speed, int direction)
       // check if the motor has moved. If not, break out of the loop after max retries
       if (ticksAM == lastTicksAM) {
         armMotorNotMoved++;
-        if (armMotorNotMoved >= MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+        if (armMotorNotMoved >= MAX_ARMS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
           // arm motor has not moved for max retries times. Break out of while loop
           break;
         }
