@@ -8,6 +8,9 @@ extern motor StackerMotor;
 extern controller Controller1;
 extern motor LeftClawMotor;
 extern motor RightClawMotor;
+extern inertial GyroSensor;
+extern motor LeftFrontMotor;
+extern motor RightFrontMotor;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.

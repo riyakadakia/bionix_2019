@@ -40,6 +40,7 @@ competition Competition;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_LOOP_ARM = 2000; // number of ticks to rotate the arm motor in each loop
 const int TICKS_PER_LOOP_STACKER = 2000; // number of ticks to rotate the stacker motor in each loop
+const int MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the loop
 
 /**
 **/
@@ -98,43 +99,57 @@ void moveStacker(float degrees, int speed, int direction)
 
     // 4. Create counter variable and set it to 0
     double ticksSM = 0;
+    double lastTicksSM = 0;
+    int stackMotorNotMoved = 0;
 
     // 5. Loop - while (counter variable < ticks)
     while (ticksSM < ticks) {
-          double moveSMTicks = 0;
+      double moveSMTicks = 0;
 
-          if (ticksSM < ticks) {
-            // read the counter value
-            ticksSM = StackerMotor.rotation(vex::rotationUnits::raw)*direction;
+      if (ticksSM < ticks) {
+        // read the counter value
+        ticksSM = StackerMotor.rotation(vex::rotationUnits::raw)*direction;
 
-            // calculate remainingTicks to move
-            double remainingTicks = ticks - ticksSM;
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksSM;
 
-            // if remainingTicks > TICKS_PER_LOOP_STACKER(), set moveTicks (variable) = TICKS_PER_LOOP_STACKER
-            // else set moveTicks = remainingTicks
-            if (remainingTicks > TICKS_PER_LOOP_STACKER) {
-              moveSMTicks = TICKS_PER_LOOP_STACKER;
-            } else {
-              moveSMTicks = remainingTicks;
-            }
+        // if remainingTicks > TICKS_PER_LOOP_STACKER(), set moveTicks (variable) = TICKS_PER_LOOP_STACKER
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_STACKER) {
+          moveSMTicks = TICKS_PER_LOOP_STACKER;
+        } else {
+          moveSMTicks = remainingTicks;
+        }
 
-            // rotateFor(moveTicks, raw, false)
-            StackerMotor.rotateFor(moveSMTicks*direction, vex::rotationUnits::raw, false);
-          }
-           /* 
-              Motor rotates at 100rpm @ 100% speed
-              => 1.667 rps (revolutions per second)
-              => 3000 ticks per second (for 1800 ticks/revolution)
+        // rotateFor(moveTicks, raw, false)
+        StackerMotor.rotateFor(moveSMTicks*direction, vex::rotationUnits::raw, false);
+      }
 
-              @ 100% speed
-              2000 ticks(TICKS_PER_LOOP_STACKER) => 2000/3000 s = 666.667 ms
+      /* 
+        Motor rotates at 100rpm @ 100% speed
+        => 1.667 rps (revolutions per second)
+        => 3000 ticks per second (for 1800 ticks/revolution)
+
+        @ 100% speed
+        2000 ticks(TICKS_PER_LOOP_STACKER) => 2000/3000 s = 666.667 ms
               
-              @ 75% speed
-              2000 ticks(TICKS_PER_LOOP_STACKER) => 666.667 ms * 100 / 75 = 888.889 ms
+        @ 75% speed
+        2000 ticks(TICKS_PER_LOOP_STACKER) => 666.667 ms * 100 / 75 = 888.889 ms
 
-              2000 ticks(TICKS_PER_LOOP_STACKER) => 2000 * 100 / 3 / speed ms = 2000 * 33.33 / speed ms
-          */
-          wait(moveSMTicks * 33.33 / speed, msec);
+        2000 ticks(TICKS_PER_LOOP_STACKER) => 2000 * 100 / 3 / speed ms = 2000 * 33.33 / speed ms
+      */
+      wait(moveSMTicks * 33.33 / speed, msec);
+      if (ticksSM == lastTicksSM) {
+        stackMotorNotMoved++;
+        if (stackMotorNotMoved >= MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // stack motor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of stackMotorNotMoved
+        stackMotorNotMoved = 0;
+        lastTicksSM = ticksSM;
+      } 
     }
     // We are done moving the stacker  
 }
@@ -153,6 +168,8 @@ void moveArms(float degrees, int speed, int direction)
 
     // 4. Create counter variable and set it to 0
     double ticksAM = 0;
+    double lastTicksAM = 0;
+    int armMotorNotMoved = 0;
 
     // 5. Loop - while (counter variable < ticks)
     while (ticksAM < ticks) { 
@@ -188,6 +205,19 @@ void moveArms(float degrees, int speed, int direction)
         2000 ticks(TICKS_PER_LOOP_ARM) => 666.667 * 100 / speed ms = 2000 * 33.33 / speed ms
       */
       wait(moveAMTicks * 33.33 / speed, msec);
+
+      // check if the motor has moved. If not, break out of the loop after max retries
+      if (ticksAM == lastTicksAM) {
+        armMotorNotMoved++;
+        if (armMotorNotMoved >= MAX_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // arm motor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of armMotorNotMoved
+        armMotorNotMoved = 0;
+        lastTicksAM = ticksAM;
+      } 
     }
     
     // We are done moving the arms
@@ -201,6 +231,7 @@ void pre_auton(void) {
   // Example: clearing encoders, setting servo positions, ...
 }
 
+
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
 /*                              Autonomous Task                              */
@@ -212,6 +243,7 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
+  
   // ..........................................................................
   // Insert autonomous user code here.
   // ..........................................................................
@@ -224,8 +256,9 @@ void autonomous(void) {
   motor LeftFrontBaseMotor = motor(PORT10, ratio18_1, false);
   motor LeftDriveSmart = motor(PORT2, ratio18_1, false);
   motor RightDriveSmart = motor(PORT1, ratio18_1, true);
-  //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
  
+  //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
+
   // Drivetrain.driveFor(forward 1100 ticks
   //Drivetrain.driveFor(reverse 1100 ticks
 
@@ -237,12 +270,12 @@ void autonomous(void) {
  
   RightFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,false);
   LeftFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,true);
-
+ 
   wait(1, timeUnits::sec);
-
+ 
   // 1. Staring position open
   StackerMotor.rotateFor(200, vex::rotationUnits::deg, false);
-
+ 
   // 2. Raise the arms to open first part of stacker
   ArmMotor.setVelocity(100, velocityUnits::pct); 
   ArmMotor.rotateFor(420, vex::rotationUnits::deg);
@@ -257,9 +290,6 @@ void autonomous(void) {
   // 5. Bring the stacker back to the starting position
   StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
 }
-
-  
-
 
 /*---------------------------------------------------------------------------*/
 /*                                                                           */
@@ -449,6 +479,7 @@ void usercontrol(void) {
         // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
         ControllerYButton = true;
       }
+    
 
     if (Controller1.ButtonA.pressing()) {
         moveStacker(650, 50, -1);
@@ -461,7 +492,7 @@ void usercontrol(void) {
       }
     
     if (Controller1.ButtonLeft.pressing()) {
-        moveArms(400, 50, 1);
+        moveArms(450, 50, 1);
         ControllerLeftButton = false;
       } else if (!ControllerLeftButton){
         ArmMotor.stop();
@@ -471,7 +502,8 @@ void usercontrol(void) {
       }
 
     if (Controller1.ButtonRight.pressing()) {
-        moveArms(540, 50, 1);
+        moveStacker(200, 50, 1);
+        moveArms(675, 50, 1);
         ControllerRightButton = false;
       } else if (!ControllerRightButton){
         ArmMotor.stop();
@@ -519,6 +551,7 @@ void usercontrol(void) {
 // Main will set up the competition functions and callbacks.
 //
 int main() {
+
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);

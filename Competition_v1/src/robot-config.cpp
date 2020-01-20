@@ -13,10 +13,13 @@ motor StackerMotor = motor(PORT7, ratio36_1, false);
 controller Controller1 = controller(primary);
 motor LeftClawMotor = motor(PORT8, ratio36_1, false);
 motor RightClawMotor = motor(PORT3, ratio36_1, true);
+inertial GyroSensor = inertial(PORT4);
+motor LeftFrontMotor = motor(PORT10, ratio18_1, false);
+motor RightFrontMotor = motor(PORT9, ratio18_1, true);
 
 // VEXcode generated functions
-
-
+// define variable for remote controller enable/disable
+bool RemoteControlCodeEnabled = true;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.
