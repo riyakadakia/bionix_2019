@@ -35,10 +35,10 @@
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 // n = normal
-//RightClawMotor 18:1 n 3
+//RightClawMotor 36:1 n 3
 //ArmMotor 36:1 reverse 6
 //StackerMotor 36:1 n 7
-//LeftClawMotor 18:1 reverse 8
+//LeftClawMotor 36:1 reverse 8
 //RightFrontMotor 18:1 reverse 9
 //LeftFrontMotor 18:1 n 10
 //RightBackMotor 18:1 reverse 1
@@ -52,13 +52,16 @@ const float WHEEL_DIAMETER = 4.125; // inches
 const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
 const int TICKS_PER_REVOLUTION_36 = 1800; // number of ticks per revolution for 36:1 gear ratio
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
-const float TURNING_DIAMETER = 17.5; // turning diameter or diagonal distance between the wheels
 const int TICKS_PER_LOOP = 450; // number of ticks to rotate the base motors in each loop
 const int TICKS_PER_LOOP_STACKER = 2000; // 50 // number of ticks to rotate the stacker motor in each loop
 const int TICKS_PER_LOOP_ARM = 2000; //number of ticks to rotate the arm motor in each loop
+const int TICKS_PER_LOOP_CLAWS = 2000; //number of ticks to rotate the claw motors in each loop
 const int MAX_STACKER_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; // number of retries before moveStacker breaks from while loopstack
-const int MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2;// number of retries before moveRobot breaks from while loop
-const int WAIT_FOR_CUBE_INTAKE = 0.2; // wait for next cube intake
+const int MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP = 4; // number of retries before moveRobot breaks from while loop
+const int MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; // number of retries before moveClaws breaks from while loop
+const double WAIT_FOR_CUBE_INTAKE = 0.2; // wait for next cube intake
+const double WAIT_PER_LOOP = 200; //wait for 200msec before checking if the motor is moving
+
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
   depending on the ticks for motor with gear ratio of 18:1 and wheel of 4.125" diameter
@@ -76,7 +79,7 @@ double convertInchesIntoTicks_18(float inches) {
 **/
 double convertInchesIntoTicks_36(float inches) {
     // Convert inches into ticks (based on gear ratio)
-    // 1,800 ticks per revolution for 18:1 gear ratio
+    // 1,800 ticks per revolution for 36:1 gear ratio
     double ticks = TICKS_PER_REVOLUTION_36*inches/WHEEL_CIRCUMFERENCE;
     return ticks;
 }
@@ -131,7 +134,7 @@ void logText(const std::string& str, double d)
 }
 
 /** 
-   moveArms moves the arms up and down by 'degrees' and 
+   XXX: moveArms moves the arms up and down by 'degrees' and 
    at a certain 'speed' pct. Use positive number in degrees
    to move up and negative number to move down. ArmMotor uses
    a cartrigde with 36:1 gear ratio.
@@ -140,7 +143,6 @@ void moveArms(float degrees, int speed)
 {
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
-    double ticksAM = 0;
 
     // 2. Set the initial motor encoder counter to 0
     ArmMotor.setRotation(0, vex::rotationUnits::raw);
@@ -149,7 +151,7 @@ void moveArms(float degrees, int speed)
     ArmMotor.setVelocity(speed, velocityUnits::pct);
 
     // 4. Create counter variable and set it to 0
-    
+    double ticksAM = 0;
 
     // 5. Loop - while (counter variable < ticks)
     while (ticksAM < ticks) {
@@ -198,10 +200,10 @@ void moveArms(float degrees, int speed)
    to move in and negative number to move out. Claw motors use
    a cartrigde with 18:1 gear ratio.
 **/
-void moveClaws(float degrees, int speed) 
+void moveClaws(float degrees, int speed, int direction) 
 {
     // 1. Convert inches into ticks
-    double ticks = convertDegreesIntoTicks_18(degrees);
+    double ticks = convertDegreesIntoTicks_36(degrees);
 
     // 2. Set the initial motor encoder counters to 0
     LeftClawMotor.setRotation(0, vex::rotationUnits::raw);
@@ -214,51 +216,101 @@ void moveClaws(float degrees, int speed)
     // 4. Create counter variables and set them to 0
     double ticksLCM = 0;
     double ticksRCM = 0;
+    double lastTicksLCM = 0;
+    double lastTicksRCM = 0;
+    int LCMotorNotMoved = 0;
+    int RCMotorNotMoved = 0;
 
     // 5. Loop - while (any counter variable < ticks)
+    double moveLCMTicks = 0;
+    double moveRCMTicks = 0;
+
     while (ticksLCM < ticks || ticksRCM < ticks) { 
+      if (ticksLCM < ticks) {
+        moveLCMTicks = 0;
 
-          if (ticksLCM < ticks && !LeftClawMotor.isSpinning()) {
-            double moveLCMTicks = 0;
+        // read the counter value
+        ticksLCM = LeftClawMotor.rotation(vex::rotationUnits::raw)*direction;
 
-            // read the counter value
-            ticksLCM = LeftClawMotor.rotation(vex::rotationUnits::raw);
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksLCM;
 
-            // calculate remainingTicks to move
-            double remainingTicks = ticks - ticksLCM;
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveLCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveLCMTicks = remainingTicks;
+        }
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
-            // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveLCMTicks = 50;
-            } else {
-              moveLCMTicks = remainingTicks;
-            }
+        // rotateFor(moveTicks, raw, false)
+        LeftClawMotor.rotateFor(moveLCMTicks*direction, vex::rotationUnits::raw, false);
+      }
 
-            // rotateFor(moveTicks, raw, false)
-            LeftClawMotor.rotateFor(moveLCMTicks, vex::rotationUnits::raw, false);
-          }
+      if (ticksRCM < ticks) {
+        moveRCMTicks = 0;
 
-          if (ticksRCM < ticks && !RightClawMotor.isSpinning()) {
-            double moveRCMTicks = 0;
+        // read the counter value
+        ticksRCM = RightClawMotor.rotation(vex::rotationUnits::raw)*direction;
 
-            // read the counter value
-            ticksRCM = RightClawMotor.rotation(vex::rotationUnits::raw);
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksRCM;
 
-            // calculate remainingTicks to move
-            double remainingTicks = ticks - ticksRCM;
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveRCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveRCMTicks = remainingTicks;
+        }
 
-            // if remainingTicks > 50, set moveTicks (variable) = 50
-            // else set moveTicks = remainingTicks
-            if (remainingTicks > 50) {
-              moveRCMTicks = 50;
-            } else {
-              moveRCMTicks = remainingTicks;
-            }
+        // rotateFor(moveTicks, raw, false)
+        RightClawMotor.rotateFor(moveRCMTicks*direction, vex::rotationUnits::raw, false);
+      }   
 
-            // rotateFor(moveTicks, raw, false)
-            RightClawMotor.rotateFor(moveRCMTicks, vex::rotationUnits::raw, false);
-          }   
+      /*
+        Motor rotates at 100rpm @ 100% speed (36:1)
+        => 1.6667 rps (revolutions per second)
+        => 3,000 ticks per second (for 1,800 ticks/revolution)
+
+        @ 100% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                       will take TICKS_PER_LOOP*0.333 msec
+
+        @ 75% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP*0.333/(75/100) msec 
+                       will take TICKS_PER_LOOP*33.33/75 msec                                 
+      */ 
+
+      if (moveRCMTicks > moveLCMTicks) {
+        wait(moveRCMTicks*33.33/speed, msec);
+      } else {
+        wait(moveLCMTicks*33.33/speed, msec);
+      }
+
+      if (ticksLCM == lastTicksLCM) {
+        LCMotorNotMoved++;
+        if (LCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // LeftClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        LCMotorNotMoved = 0;
+        lastTicksLCM = ticksLCM;
+      } 
+
+      if (ticksRCM == lastTicksRCM) {
+        RCMotorNotMoved++;
+        if (RCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // RightClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        RCMotorNotMoved = 0;
+        lastTicksRCM = ticksRCM;
+      }
     }
     // We are done moving the claws
 }
@@ -300,15 +352,17 @@ void moveRobot(float inches, int speed, int direction)
     double lastTicksLFM = 0;
     double lastTicksRBM = 0;
     double lastTicksLBM = 0;
-
-
+    double moveRFMTicks = 0;
+    double moveLFMTicks = 0;
+    double moveLBMTicks = 0;
+    double moveRBMTicks = 0;
 
     // 5. Loop - while (any counter variable < ticks)
     while (ticksLFM < ticks || ticksRFM < ticks || 
            ticksLBM < ticks || ticksRBM < ticks) {
       
           if (ticksLFM < ticks) {
-            double moveLFMTicks = 0;
+            moveLFMTicks = 0;
 
             // read the counter value
             ticksLFM = LeftFrontMotor.rotation(vex::rotationUnits::raw)*direction;
@@ -329,7 +383,7 @@ void moveRobot(float inches, int speed, int direction)
           }
 
           if (ticksLBM < ticks) {
-            double moveLBMTicks = 0;
+            moveLBMTicks = 0;
 
             // read the counter value
             ticksLBM = LeftBackMotor.rotation(vex::rotationUnits::raw)*direction;
@@ -350,7 +404,7 @@ void moveRobot(float inches, int speed, int direction)
           }
 
           if (ticksRBM < ticks) {
-            double moveRBMTicks = 0;
+            moveRBMTicks = 0;
 
             // read the counter value
             ticksRBM = RightBackMotor.rotation(vex::rotationUnits::raw)*direction;
@@ -407,48 +461,62 @@ void moveRobot(float inches, int speed, int direction)
                              will take TICKS_PER_LOOP*33.333/75 msec
                                        
           */ 
-          wait(TICKS_PER_LOOP*33.333/speed, msec);
+          double maxTicksToMove = 0;
+          if (moveRFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRFMTicks;
+          }
+          if (moveLFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLFMTicks;
+          }
+          if (moveRBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRBMTicks;
+          }
+          if (moveLBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLBMTicks;
+          }
+          wait(maxTicksToMove*33.333/speed, msec);
+
           if (ticksRFM == lastTicksRFM) {
             RFMotorNotMoved++;
             if (RFMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-              // stack motor has not moved for max retries times. Break out of while loop
-              break;
+              // RightFrontMotor has not moved for max retries times. Break out of while loop
+              return;
             }
           } else {
-            // reset the value of stackMotorNotMoved
+            // reset the value of RightFrontMotorNotMoved
             RFMotorNotMoved = 0;
             lastTicksRFM = ticksRFM;
           } 
           if (ticksLFM == lastTicksLFM) {
             LFMotorNotMoved++;
             if (LFMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-              // stack motor has not moved for max retries times. Break out of while loop
+              // LeftFrontMotor has not moved for max retries times. Break out of while loop
               break;
             }
           } else {
-            // reset the value of stackMotorNotMoved
+            // reset the value of LeftFrontMotorNotMoved
             LFMotorNotMoved = 0;
             lastTicksLFM = ticksLFM;
           } 
           if (ticksRBM == lastTicksRBM) {
             RBMotorNotMoved++;
             if (RBMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-              // stack motor has not moved for max retries times. Break out of while loop
+              // RightBackMotor has not moved for max retries times. Break out of while loop
               break;
             }
           } else {
-            // reset the value of stackMotorNotMoved
+            // reset the value of RightBackMotorNotMoved
             RBMotorNotMoved = 0;
             lastTicksRBM = ticksRBM;
           } 
           if (ticksLBM == lastTicksLBM) {
             LBMotorNotMoved++;
             if (LBMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-              // stack motor has not moved for max retries times. Break out of while loop
+              // LeftBackMotor has not moved for max retries times. Break out of while loop
               break;
             }
           } else {
-            // reset the value of stackMotorNotMoved
+            // reset the value of LeftBackMotorNotMoved
             LBMotorNotMoved = 0;
             lastTicksLBM = ticksLBM;
           } 
@@ -518,10 +586,7 @@ void turnRobot(float degrees, int speed)
     RightFrontMotor.rotateFor(wheelDegrees * 1/2, vex::rotationUnits::deg, speed, vex::velocityUnits::pct);
 }
 */
-/**
-  setStartingPosition prepares the robot to move into the starting 
-  position after the timer is started
-**/ 
+
 void turnRobot(double deg, int speed, int direction)
  {
   // Initializing Robot Configuration. DO NOT REMOVE!
@@ -556,6 +621,7 @@ void turnRobot(double deg, int speed, int direction)
   LeftBackMotor.stop();
   RightBackMotor.stop();
 }
+
 void moveStacker(float degrees, int speed, int direction)
 {
     // 1. Convert degrees into ticks
@@ -624,6 +690,10 @@ void moveStacker(float degrees, int speed, int direction)
     // We are done moving the stacker  
 }
 
+/**
+  setStartingPosition prepares the robot to move into the starting 
+  position after the timer is started
+**/ 
 void setStartingPosition() 
 {
   // 1. Push the stacker out
@@ -662,57 +732,40 @@ int main() {
 11. place stack
 */
 
+  GyroSensor.calibrate();
   //setStartingPosition();
   startSpinningClaws(1, 100);
-  GyroSensor.calibrate();
+  // Pick up the pre-load
   wait(WAIT_FOR_CUBE_INTAKE, sec);
+
   // waits for the Inertial Sensor to calibrate
   /*while (GyroSensor.isCalibrating()) {
     wait(100, msec);
   }*/
+  
   moveRobot(18, 25,1);
-  //wait(WAIT_FOR_CUBE_INTAKE, sec);
-  for (int i = 0; i < 3; i++){
+  // Pick up cube #2
+  wait(WAIT_FOR_CUBE_INTAKE, sec);
+  for (int i = 0; i < 2; i++){
     moveRobot(6,25,1);
+    // Pick up cube #3 & #4
     wait(WAIT_FOR_CUBE_INTAKE,sec);
   }
+  wait(600, msec);
+  moveRobot(9,25,1);
+  // Pick up cube #5
+  wait(500, msec);
   stopSpinningClaws();
-  moveRobot(30,75,-1);
-  turnRobot(90,25,1);
-  moveRobot(6,25,1);
+
+  // Move backward to goal
+  moveRobot(25,75,-1);
+  turnRobot(105,15,1);
+  moveRobot(11,25,1);
+
+  //moveClaws(180,100,1);
   moveStacker(625, 25, 1);
-  moveRobot(3,25,-1);
-  moveStacker(625,50,-1);
-  
-  // Move the robot 36" at 75% speed
-  //moveRobot(36, 20); 
-  
-
-  // Move the arm motor 30 degrees at 50% speed
-  //moveArms(30, 50);
-  //wait(5, seconds);
-
-  // Move the claws 45 degrees at 80% speed
-  //moveClaws(45, 80);
-  //wait(5, seconds);
-
-  // Move the stacker 30 degrees at 90% speed
-  //moveStacker(550, 100);
-  //moveArms(400, 50);
-
-  //wait(.1, seconds);
-  //moveRobot(1, 5);
-  //moveStacker(-550, 100);
-  
-  // Start spinning the claws for intake (1) at 80% speed
-
-
-  // Stop spinning the claws
-  //stopSpinningClaws();
- 
-
-  // Turn the robot right by 45 degrees at 25% speed
- // turnRobot(45, 25);
+  moveRobot(8,25,-1);
+  //moveStacker(625,50,-1);
 
 }
 
