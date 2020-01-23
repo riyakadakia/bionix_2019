@@ -449,7 +449,7 @@ void usercontrol(void) {
       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
       Controller1L2ButtonMotorsStopped = true;
     }
-
+/*
     if (Controller1.ButtonR2.pressing()) {
       LeftFrontDriveSmart.setVelocity(100, pct);
       RightFrontDriveSmart.setVelocity(100, pct);
@@ -470,9 +470,10 @@ void usercontrol(void) {
       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
       Controller1R2ButtonMotorsStopped = true;
     }    
-    
+    */
     if (Controller1.ButtonY.pressing()) {
-        moveStacker(625, 25, 1);
+        moveStacker(500, 50, 1);
+        moveStacker(125, 20, 1);
         ControllerYButton = false;
       } else if (!ControllerYButton){
         StackerMotor.stop();
@@ -481,9 +482,8 @@ void usercontrol(void) {
         ControllerYButton = true;
       }
     
-
     if (Controller1.ButtonA.pressing()) {
-        moveStacker(625, 25, -1);
+        moveStacker(625, 50, -1);
         ControllerAButton = false;
       } else if (!ControllerAButton){
         StackerMotor.stop();
