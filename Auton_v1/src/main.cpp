@@ -60,8 +60,7 @@ const int MAX_STACKER_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; // number of retrie
 const int MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP = 4; // number of retries before moveRobot breaks from while loop
 const int MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; // number of retries before moveClaws breaks from while loop
 const double WAIT_FOR_CUBE_INTAKE = 0.2; // wait for next cube intake
-const double WAIT_PER_LOOP = 200; //wait for 200msec before checking if the motor is moving
-
+const int MAX_ARMS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2;
 /**
   convertInchesIntoTicks_18 converts 'inches' into the appropriate number of motor ticks
   depending on the ticks for motor with gear ratio of 18:1 and wheel of 4.125" diameter
@@ -139,7 +138,7 @@ void logText(const std::string& str, double d)
    to move up and negative number to move down. ArmMotor uses
    a cartrigde with 36:1 gear ratio.
 **/
-void moveArms(float degrees, int speed)
+void moveArms(float degrees, int speed, int direction)
 {
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
@@ -152,48 +151,60 @@ void moveArms(float degrees, int speed)
 
     // 4. Create counter variable and set it to 0
     double ticksAM = 0;
+    double lastTicksAM = 0;
+    int armMotorNotMoved = 0;
 
     // 5. Loop - while (counter variable < ticks)
-    while (ticksAM < ticks) {
-      
-          if (ticksAM < ticks && !ArmMotor.isSpinning()) {
-            double moveAMTicks = 0;
+    while (ticksAM < ticks) { 
+      double moveAMTicks = 0;
 
-            // read the counter value
-            ticksAM = ArmMotor.rotation(vex::rotationUnits::raw);
+      // read the counter value
+      ticksAM = ArmMotor.rotation(vex::rotationUnits::raw)*direction;
 
-            // calculate remainingTicks to move
-            double remainingTicks = ticks - ticksAM;
+      // calculate remainingTicks to move
+      double remainingTicks = ticks - ticksAM;
 
-            // if remainingTicks > TICKS_PER_LOOP_ARM(50), set moveTicks (variable) = TICKS_PER_LOOP_ARM
-            // else set moveTicks = remainingTicks
-            if (remainingTicks > TICKS_PER_LOOP_ARM) {
-              moveAMTicks = TICKS_PER_LOOP_ARM;
-            } else {
-              moveAMTicks = remainingTicks;
-            }
+      // if remainingTicks > TICKS_PER_LOOP_ARM(2000), set moveTicks (variable) = TICKS_PER_LOOP_ARM
+      // else set moveTicks = remainingTicks
+      if (remainingTicks > TICKS_PER_LOOP_ARM) {
+        moveAMTicks = TICKS_PER_LOOP_ARM;
+      } else {
+        moveAMTicks = remainingTicks;
+      }
 
-            // rotateFor(moveTicks, raw, false)
-            ArmMotor.rotateFor(moveAMTicks, vex::rotationUnits::raw, false);
-          }
-          /* 
-              Motor rotates at 100rpm @ 100% speed
-              => 1.667 rps (revolutions per second)
-              => 3000 ticks per second (for 1800 ticks/revolution)
+      ArmMotor.rotateFor(moveAMTicks, vex::rotationUnits::raw, false);
 
-              @ 100% speed
-              2000 ticks(TICKS_PER_LOOP_ARM) => 2000/3000 s = 666.667 ms
-              
-              @ 75% speed
-              2000 ticks(TICKS_PER_LOOP_ARM) => 666.667 ms * 100 / 75 = 888.889 ms
+      /* 
+        Motor rotates at 100rpm @ 100% speed
+        => 1.667 rps (revolutions per second)
+        => 3000 ticks per second (for 1800 ticks/revolution)
 
-              2000 ticks(TICKS_PER_LOOP_ARM) => 2000 * 100 / 3 / speed ms = 2000 * 33.33 / speed ms
-          */
-          wait(TICKS_PER_LOOP_ARM * 33.33 / speed, msec);
+        @ 100% speed
+        2000 ticks(TICKS_PER_LOOP_ARM) => 2000/3000 s = 666.667 ms
+        
+        @ 75% speed
+        2000 ticks(TICKS_PER_LOOP_ARM) => 666.667 ms * 100 / 75 = 888.889 ms
+
+        2000 ticks(TICKS_PER_LOOP_ARM) => 666.667 * 100 / speed ms = 2000 * 33.33 / speed ms
+      */
+      wait(moveAMTicks * 33.33 / speed, msec);
+
+      // check if the motor has moved. If not, break out of the loop after max retries
+      if (ticksAM == lastTicksAM) {
+        armMotorNotMoved++;
+        if (armMotorNotMoved >= MAX_ARMS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // arm motor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of armMotorNotMoved
+        armMotorNotMoved = 0;
+        lastTicksAM = ticksAM;
+      } 
     }
-    // We are done moving the arms  
+    
+    // We are done moving the arms
 }
-
 /** 
    moveClaws spins both the claws in and out by 'degrees' and 
    at a certain 'speed' pct. Use positive number in degrees
@@ -696,22 +707,12 @@ void moveStacker(float degrees, int speed, int direction)
 **/ 
 void setStartingPosition() 
 {
-  // 1. Push the stacker out
-  StackerMotor.rotateFor(200, vex::rotationUnits::deg, false);
-
-  // 2. Even while the stacker is moving out, raise the arms
+  // Raise the arms
   ArmMotor.setVelocity(100, velocityUnits::pct); 
-  ArmMotor.rotateFor(400, vex::rotationUnits::deg);
-
-  // 3. Spin the claws outward to untangle the stacker if it gets stuck
-  RightClawMotor.rotateFor(180, vex::rotationUnits::deg, false);
-  LeftClawMotor.rotateFor(180, vex::rotationUnits::deg, true);
-
-  // 4. Bring the arms back to the starting position
   ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
 
-  // 5. Bring the stacker back to the starting position
-  StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
+  // Bring the arms back to the starting position
+  ArmMotor.rotateFor(400, vex::rotationUnits::deg);
 }
 
 
@@ -731,12 +732,12 @@ int main() {
 10. outake by little
 11. place stack
 */
-
+ // moveArms(180,100, -1);
   GyroSensor.calibrate();
-  //setStartingPosition();
+  setStartingPosition();
   startSpinningClaws(1, 100);
   // Pick up the pre-load
-  wait(WAIT_FOR_CUBE_INTAKE, sec);
+  //wait(WAIT_FOR_CUBE_INTAKE, sec);
 
   // waits for the Inertial Sensor to calibrate
   /*while (GyroSensor.isCalibrating()) {
@@ -754,24 +755,19 @@ int main() {
   wait(600, msec);
   moveRobot(9,25,1);
   // Pick up cube #5
-  wait(500, msec);
+  wait(450, msec);
   stopSpinningClaws();
 
   // Move backward to goal
   moveRobot(25,75,-1);
-  turnRobot(105,15,1);
+  turnRobot(110,15,1);
   moveRobot(11,25,1);
 
   //moveClaws(180,100,1);
-  moveStacker(625, 25, 1);
+  moveStacker(500, 50, 1);
+  moveStacker(150, 20, 1);
+
   moveRobot(8,25,-1);
   //moveStacker(625,50,-1);
 
 }
-
-
-
-
-
-
-

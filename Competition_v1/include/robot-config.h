@@ -11,6 +11,8 @@ extern motor RightClawMotor;
 extern inertial GyroSensor;
 extern motor LeftFrontMotor;
 extern motor RightFrontMotor;
+extern motor LeftBackMotor;
+extern motor RightBackMotor;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.

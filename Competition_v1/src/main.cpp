@@ -15,6 +15,11 @@
 // Controller1          controller                    
 // LeftClawMotor        motor         8               
 // RightClawMotor       motor         3               
+// GyroSensor           inertial      4               
+// LeftFrontMotor       motor         10              
+// RightFrontMotor      motor         9               
+// LeftBackMotor        motor         2               
+// RightBackMotor       motor         1               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
@@ -42,9 +47,24 @@ const int TICKS_PER_LOOP_ARM = 2000; // number of ticks to rotate the arm motor 
 const int TICKS_PER_LOOP_STACKER = 2000; // number of ticks to rotate the stacker motor in each loop
 const int MAX_STACKER_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the moveStacker loop
 const int MAX_ARMS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2; //number of retries before we break from the moveArms loop
+const double WAIT_FOR_CUBE_INTAKE = 0.2; 
+const float WHEEL_DIAMETER = 4.125; // inches
+const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
+const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
+const int TICKS_PER_LOOP = 450; // number of ticks to rotate the base motors in each loop
+const int MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP = 4; // number of retries before moveRobot breaks from while loop
+
 
 /**
 **/
+double convertInchesIntoTicks_18(float inches) {
+  // Convert inches into ticks (based on gear ratio)
+  // 900 ticks per revolution for 18:1 gear ratio
+  double ticks = TICKS_PER_REVOLUTION_18*inches/WHEEL_CIRCUMFERENCE;
+  return ticks;
+}
+
+
 void logTextClearScreen(const std::string& str)
 {
   Controller1.Screen.clearScreen();
@@ -154,6 +174,283 @@ void moveStacker(float degrees, int speed, int direction)
     }
     // We are done moving the stacker  
 }
+void setStartingPosition() 
+{
+  // Raise the arms
+  ArmMotor.setVelocity(100, velocityUnits::pct); 
+  ArmMotor.rotateFor(400, vex::rotationUnits::deg);
+
+  // Bring the arms back to the starting position
+  ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
+}
+void startSpinningClaws(int direction, int speed)
+{
+  // 1. Set the speed for both the claws
+  LeftClawMotor.setVelocity(speed, vex::velocityUnits::pct);
+  RightClawMotor.setVelocity(speed, vex::velocityUnits::pct);
+
+  // 2. Now begin spinning the claws
+  if (direction == 1) {
+    LeftClawMotor.spin(reverse);
+  } else if (direction == -1) {
+    LeftClawMotor.spin(forward);
+  }
+
+  if (direction == 1) {
+    RightClawMotor.spin(reverse);
+  } else if (direction == -1) {
+    RightClawMotor.spin(forward);
+  }
+
+  // We are done starting to spin the claw motors at the 'speed'
+}
+
+void moveRobot(float inches, int speed, int direction) 
+{
+ 
+    // 1. Convert inches into ticks
+    double ticks = convertInchesIntoTicks_18(inches);
+
+    // 2. Set the initial motor encoder counters to 0
+    LeftFrontMotor.setRotation(0, vex::rotationUnits::raw);
+    LeftBackMotor.setRotation(0, vex::rotationUnits::raw);
+    RightFrontMotor.setRotation(0, vex::rotationUnits::raw);
+    RightBackMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motors to 'speed'
+    LeftFrontMotor.setVelocity(speed, velocityUnits::pct);
+    RightFrontMotor.setVelocity(speed, velocityUnits::pct);
+    LeftBackMotor.setVelocity(speed, velocityUnits::pct);
+    RightBackMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variables and set them to 0
+    double ticksLFM = 0;
+    double ticksRFM = 0;
+    double ticksLBM = 0;
+    double ticksRBM = 0;
+    double lastTicksRFM = 0;
+    int RFMotorNotMoved = 0;
+    int LFMotorNotMoved = 0;
+    int RBMotorNotMoved = 0;
+    int LBMotorNotMoved = 0;
+    double lastTicksLFM = 0;
+    double lastTicksRBM = 0;
+    double lastTicksLBM = 0;
+    double moveRFMTicks = 0;
+    double moveLFMTicks = 0;
+    double moveLBMTicks = 0;
+    double moveRBMTicks = 0;
+
+    // 5. Loop - while (any counter variable < ticks)
+    while (ticksLFM < ticks || ticksRFM < ticks || 
+           ticksLBM < ticks || ticksRBM < ticks) {
+      
+          if (ticksLFM < ticks) {
+            moveLFMTicks = 0;
+
+            // read the counter value
+            ticksLFM = LeftFrontMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksLFM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLFMTicks = TICKS_PER_LOOP;
+            } else {
+              moveLFMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            LeftFrontMotor.rotateFor(moveLFMTicks*direction, vex::rotationUnits::raw, false);
+          }
+
+          if (ticksLBM < ticks) {
+            moveLBMTicks = 0;
+
+            // read the counter value
+            ticksLBM = LeftBackMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksLBM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLBMTicks = TICKS_PER_LOOP;
+            } else {
+              moveLBMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            LeftBackMotor.rotateFor(moveLBMTicks*direction, vex::rotationUnits::raw, false);
+          }
+
+          if (ticksRBM < ticks) {
+            moveRBMTicks = 0;
+
+            // read the counter value
+            ticksRBM = RightBackMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksRBM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRBMTicks = TICKS_PER_LOOP;
+            } else {
+              moveRBMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            RightBackMotor.rotateFor(moveRBMTicks*direction, vex::rotationUnits::raw, false);
+          }   
+
+          if (ticksRFM < ticks) {
+            double moveRFMTicks = 0;
+
+            // read the counter value
+            ticksRFM = RightFrontMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksRFM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRFMTicks = TICKS_PER_LOOP;
+            } else {
+              moveRFMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            RightFrontMotor.rotateFor(moveRFMTicks*direction, vex::rotationUnits::raw, false);
+          }
+
+          /*
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 3,000 ticks per second (for 900 ticks/revolution)
+
+              @ 100% speed
+              1 inch = 69.44 ticks => 0.023146 seconds => 23.146 ms
+              TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                             will take TICKS_PER_LOOP*0.333 msec
+
+              @ 75% speed
+              1 inch = 69.44 ticks => 0.030862 seconds => 30.862 ms
+              TICKS_PER_LOOP will take TICKS_PER_LOOP*0.33333/(75/100) msec 
+                             will take TICKS_PER_LOOP*33.333/75 msec
+                                       
+          */ 
+          double maxTicksToMove = 0;
+          if (moveRFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRFMTicks;
+          }
+          if (moveLFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLFMTicks;
+          }
+          if (moveRBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRBMTicks;
+          }
+          if (moveLBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLBMTicks;
+          }
+          wait(maxTicksToMove*33.333/speed, msec);
+
+          if (ticksRFM == lastTicksRFM) {
+            RFMotorNotMoved++;
+            if (RFMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // RightFrontMotor has not moved for max retries times. Break out of while loop
+              return;
+            }
+          } else {
+            // reset the value of RightFrontMotorNotMoved
+            RFMotorNotMoved = 0;
+            lastTicksRFM = ticksRFM;
+          } 
+          if (ticksLFM == lastTicksLFM) {
+            LFMotorNotMoved++;
+            if (LFMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // LeftFrontMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of LeftFrontMotorNotMoved
+            LFMotorNotMoved = 0;
+            lastTicksLFM = ticksLFM;
+          } 
+          if (ticksRBM == lastTicksRBM) {
+            RBMotorNotMoved++;
+            if (RBMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // RightBackMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of RightBackMotorNotMoved
+            RBMotorNotMoved = 0;
+            lastTicksRBM = ticksRBM;
+          } 
+          if (ticksLBM == lastTicksLBM) {
+            LBMotorNotMoved++;
+            if (LBMotorNotMoved >= MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // LeftBackMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of LeftBackMotorNotMoved
+            LBMotorNotMoved = 0;
+            lastTicksLBM = ticksLBM;
+          } 
+    }
+    // We are done moving the robot
+}
+
+void stopSpinningClaws()
+{
+  // Stop spinning the claws
+    LeftClawMotor.stop();
+    RightClawMotor.stop();
+
+  // We are done stopping to spin the claw motors
+}
+
+void turnRobot(double deg, int speed, int direction)
+ {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  LeftBackMotor.setVelocity(speed,percent);
+  LeftFrontMotor.setVelocity(speed,percent);
+  RightFrontMotor.setVelocity(speed,percent);
+  RightBackMotor.setVelocity(speed,percent);
+
+  if (direction > 0){
+    LeftBackMotor.spin(forward);
+    LeftFrontMotor.spin(forward);
+    RightFrontMotor.spin(reverse);
+    RightBackMotor.spin(reverse);
+  }
+  else {
+    LeftBackMotor.spin(reverse);
+    LeftFrontMotor.spin(reverse);
+    RightFrontMotor.spin(forward); 
+    RightBackMotor.spin(forward);
+  }
+
+  // Waits until the motor reaches a 90 degree turn and stops the Left and
+  // Right Motors.
+  if (direction > 0) {
+    waitUntil((GyroSensor.rotation(degrees) >= deg));
+  } else {
+    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));
+  }
+
+  LeftFrontMotor.stop();
+  RightFrontMotor.stop();
+  LeftBackMotor.stop();
+  RightBackMotor.stop();
+}
 
 
 void moveArms(float degrees, int speed, int direction)
@@ -227,6 +524,11 @@ void moveArms(float degrees, int speed, int direction)
 void pre_auton(void) {
   // Initializing Robot Configuration. DO NOT REMOVE!
   vexcodeInit();
+  GyroSensor.calibrate();
+  while (GyroSensor.isCalibrating()) {
+    wait(100, msec);
+  }
+  Controller1.Screen.print("GyroSensor Calibrated");   
 
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...
@@ -246,7 +548,41 @@ void pre_auton(void) {
 void autonomous(void) {
   
   // ..........................................................................
-  // Insert autonomous user code here.
+  setStartingPosition();
+  startSpinningClaws(-1, 100);
+  // Pick up the pre-load
+  //wait(WAIT_FOR_CUBE_INTAKE, sec);
+
+  // waits for the Inertial Sensor to calibrate
+  /*while (GyroSensor.isCalibrating()) {
+    wait(100, msec);
+  }*/
+  
+  moveRobot(18, 25,1);
+  // Pick up cube #2
+  wait(WAIT_FOR_CUBE_INTAKE, sec);
+  for (int i = 0; i < 2; i++){
+    moveRobot(6,25,1);
+    // Pick up cube #3 & #4
+    wait(WAIT_FOR_CUBE_INTAKE,sec);
+  }
+  wait(600, msec);
+  moveRobot(9,25,1);
+  // Pick up cube #5
+  wait(450, msec);
+  stopSpinningClaws();
+
+  // Move backward to goal
+  moveRobot(22,75,-1);
+  turnRobot(115,15,1);
+  moveRobot(12.5,25,1);
+
+  //moveClaws(180,100,1);
+  moveStacker(500, 50, 1);
+  moveStacker(150, 20, 1);
+
+  moveRobot(8,25,-1);
+
   // ..........................................................................
 
   // An instance of brain used for printing to the V5 Brain screen
@@ -264,6 +600,7 @@ void autonomous(void) {
   //Drivetrain.driveFor(reverse 1100 ticks
 
   // 0. 1 point Auton 
+  /*
   RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
   LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
 
@@ -290,6 +627,7 @@ void autonomous(void) {
 
   // 5. Bring the stacker back to the starting position
   StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
+  */
 }
 
 /*---------------------------------------------------------------------------*/
@@ -321,7 +659,6 @@ void usercontrol(void) {
   //bool Controller1RightShoulderControlMotorsStopped = true;
   bool Controller1L1ButtonMotorsStopped = true;
   bool Controller1R1ButtonMotorsStopped = true;
-  bool Controller1R2ButtonMotorsStopped = true;
   bool Controller1L2ButtonMotorsStopped = true;
   bool Controller1UpDownButtonsControlMotorsStopped = true;
   bool Controller1XBButtonsControlMotorsStopped = true;
@@ -553,12 +890,11 @@ void usercontrol(void) {
 //
 int main() {
 
+  // Run the pre-autonomous function.
+  pre_auton();
   // Set up callbacks for autonomous and driver control periods.
   Competition.autonomous(autonomous);
   Competition.drivercontrol(usercontrol);
-
-  // Run the pre-autonomous function.
-  pre_auton();
 
   // Prevent main from exiting with an infinite loop.
   while (true) {
