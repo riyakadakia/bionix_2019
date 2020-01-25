@@ -53,7 +53,8 @@ const float WHEEL_CIRCUMFERENCE = WHEEL_DIAMETER * 3.1416;
 const int TICKS_PER_REVOLUTION_18 = 900; // number of ticks per revolution for 18:1 gear ratio
 const int TICKS_PER_LOOP = 450; // number of ticks to rotate the base motors in each loop
 const int MAX_BASE_RETRIES_BEFORE_BREAKING_FROM_LOOP = 4; // number of retries before moveRobot breaks from while loop
-
+const int MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP = 2;
+const int TICKS_PER_LOOP_CLAWS = 2000; //number of ticks to rotate the claw motors in each loop
 
 /**
 **/
@@ -174,6 +175,7 @@ void moveStacker(float degrees, int speed, int direction)
     }
     // We are done moving the stacker  
 }
+
 void setStartingPosition() 
 {
   // Raise the arms
@@ -183,6 +185,7 @@ void setStartingPosition()
   // Bring the arms back to the starting position
   ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
 }
+
 void startSpinningClaws(int direction, int speed)
 {
   // 1. Set the speed for both the claws
@@ -452,6 +455,120 @@ void turnRobot(double deg, int speed, int direction)
   RightBackMotor.stop();
 }
 
+void moveClaws(float degrees, int speed, int direction) 
+{
+    // 1. Convert inches into ticks
+    double ticks = convertDegreesIntoTicks_36(degrees);
+
+    // 2. Set the initial motor encoder counters to 0
+    LeftClawMotor.setRotation(0, vex::rotationUnits::raw);
+    RightClawMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motors to 'speed'
+    LeftClawMotor.setVelocity(speed, velocityUnits::pct);
+    RightClawMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variables and set them to 0
+    double ticksLCM = 0;
+    double ticksRCM = 0;
+    double lastTicksLCM = 0;
+    double lastTicksRCM = 0;
+    int LCMotorNotMoved = 0;
+    int RCMotorNotMoved = 0;
+
+    // 5. Loop - while (any counter variable < ticks)
+    double moveLCMTicks = 0;
+    double moveRCMTicks = 0;
+
+    while (ticksLCM < ticks || ticksRCM < ticks) { 
+      if (ticksLCM < ticks) {
+        moveLCMTicks = 0;
+
+        // read the counter value
+        ticksLCM = LeftClawMotor.rotation(vex::rotationUnits::raw)*direction;
+
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksLCM;
+
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveLCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveLCMTicks = remainingTicks;
+        }
+
+        // rotateFor(moveTicks, raw, false)
+        LeftClawMotor.rotateFor(moveLCMTicks*direction, vex::rotationUnits::raw, false);
+      }
+
+      if (ticksRCM < ticks) {
+        moveRCMTicks = 0;
+
+        // read the counter value
+        ticksRCM = RightClawMotor.rotation(vex::rotationUnits::raw)*direction;
+
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksRCM;
+
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveRCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveRCMTicks = remainingTicks;
+        }
+
+        // rotateFor(moveTicks, raw, false)
+        RightClawMotor.rotateFor(moveRCMTicks*direction, vex::rotationUnits::raw, false);
+      }   
+
+      /*
+        Motor rotates at 100rpm @ 100% speed (36:1)
+        => 1.6667 rps (revolutions per second)
+        => 3,000 ticks per second (for 1,800 ticks/revolution)
+
+        @ 100% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                       will take TICKS_PER_LOOP*0.333 msec
+
+        @ 75% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP*0.333/(75/100) msec 
+                       will take TICKS_PER_LOOP*33.33/75 msec                                 
+      */ 
+
+      if (moveRCMTicks > moveLCMTicks) {
+        wait(moveRCMTicks*33.33/speed, msec);
+      } else {
+        wait(moveLCMTicks*33.33/speed, msec);
+      }
+
+      if (ticksLCM == lastTicksLCM) {
+        LCMotorNotMoved++;
+        if (LCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // LeftClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        LCMotorNotMoved = 0;
+        lastTicksLCM = ticksLCM;
+      } 
+
+      if (ticksRCM == lastTicksRCM) {
+        RCMotorNotMoved++;
+        if (RCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // RightClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        RCMotorNotMoved = 0;
+        lastTicksRCM = ticksRCM;
+      }
+    }
+    // We are done moving the claws
+}
 
 void moveArms(float degrees, int speed, int direction)
 {
@@ -550,6 +667,7 @@ void autonomous(void) {
   // ..........................................................................
   setStartingPosition();
   startSpinningClaws(-1, 100);
+
   // Pick up the pre-load
   //wait(WAIT_FOR_CUBE_INTAKE, sec);
 
@@ -558,7 +676,9 @@ void autonomous(void) {
     wait(100, msec);
   }*/
   
-  moveRobot(18, 25,1);
+  moveRobot(12,50,1);
+  moveRobot(6,25,1); 
+  
   // Pick up cube #2
   wait(WAIT_FOR_CUBE_INTAKE, sec);
   for (int i = 0; i < 2; i++){
@@ -568,6 +688,7 @@ void autonomous(void) {
   }
   wait(600, msec);
   moveRobot(9,25,1);
+
   // Pick up cube #5
   wait(450, msec);
   stopSpinningClaws();
@@ -575,11 +696,11 @@ void autonomous(void) {
   // Move backward to goal
   moveRobot(22,75,-1);
   turnRobot(115,15,1);
-  moveRobot(12.5,25,1);
+  moveRobot(13,50,1);
 
-  //moveClaws(180,100,1);
   moveStacker(500, 50, 1);
-  moveStacker(150, 20, 1);
+  //moveClaws(60,50,-1);
+  moveStacker(150, 25, 1);
 
   moveRobot(8,25,-1);
 
@@ -596,38 +717,6 @@ void autonomous(void) {
  
   //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
 
-  // Drivetrain.driveFor(forward 1100 ticks
-  //Drivetrain.driveFor(reverse 1100 ticks
-
-  // 0. 1 point Auton 
-  /*
-  RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
-
-  wait(1, timeUnits::sec);
- 
-  RightFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,true);
- 
-  wait(1, timeUnits::sec);
- 
-  // 1. Staring position open
-  StackerMotor.rotateFor(200, vex::rotationUnits::deg, false);
- 
-  // 2. Raise the arms to open first part of stacker
-  ArmMotor.setVelocity(100, velocityUnits::pct); 
-  ArmMotor.rotateFor(420, vex::rotationUnits::deg);
-
-  // 3. Spin the claws outward to untangle the stacker if it gets stuck
-  RightClawMotor.rotateFor(180, vex::rotationUnits::deg, false);
-  LeftClawMotor.rotateFor(180, vex::rotationUnits::deg, true);
-
-  // 4. Bring the arms back to the starting position
-  ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
-
-  // 5. Bring the stacker back to the starting position
-  StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
-  */
 }
 
 /*---------------------------------------------------------------------------*/
