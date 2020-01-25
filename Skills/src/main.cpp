@@ -665,6 +665,7 @@ void autonomous(void) {
   // ..........................................................................
   setStartingPosition();
   startSpinningClaws(-1, 100);
+
   // Pick up the pre-load
   //wait(WAIT_FOR_CUBE_INTAKE, sec);
 
@@ -685,6 +686,7 @@ void autonomous(void) {
   }
   wait(600, msec);
   moveRobot(9,25,1);
+
   // Pick up cube #5
   wait(450, msec);
   stopSpinningClaws();
@@ -692,11 +694,11 @@ void autonomous(void) {
   // Move backward to goal
   moveRobot(22,75,-1);
   turnRobot(115,15,1);
-  moveRobot(13,25,1);
+  moveRobot(13,50,1);
 
   moveStacker(500, 50, 1);
-  moveClaws(60,50,-1);
-  moveStacker(150, 20, 1);
+  //moveClaws(60,50,-1);
+  moveStacker(150, 25, 1);
 
   moveRobot(8,25,-1);
 
