@@ -427,12 +427,13 @@ void turnRobot(double deg, int speed, int direction)
   LeftFrontMotor.setVelocity(speed,percent);
   RightFrontMotor.setVelocity(speed,percent);
   RightBackMotor.setVelocity(speed,percent);
-
   // Get the current gyro sensor value
+
   double currentDeg = GyroSensor.rotation(degrees);
 
   // Add the 'deg' to the current value as the new 'deg' value to turn
   deg = deg - currentDeg; 
+
 
   if (direction > 0){
     LeftBackMotor.spin(forward);
@@ -450,9 +451,9 @@ void turnRobot(double deg, int speed, int direction)
   // Waits until the motor reaches a 90 degree turn and stops the Left and
   // Right Motors.
   if (direction > 0) {
-    waitUntil((GyroSensor.rotation(degrees) >= deg));//right
+    waitUntil((GyroSensor.rotation(degrees) >= deg));
   } else {
-    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));//left
+    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));
   }
 
   LeftFrontMotor.stop();
@@ -701,7 +702,7 @@ void autonomous(void) {
 
   // Move backward to goal
   moveRobot(22,75,-1);
-  turnRobot(105,15,1);
+  turnRobot(105,15,-1);
   moveRobot(14.5,50,1);
 
   moveStacker(500, 50, 1);
