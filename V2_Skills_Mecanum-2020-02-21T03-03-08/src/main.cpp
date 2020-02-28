@@ -23,6 +23,7 @@
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
 #include "vex.h"
+#include <cmath>
 
 using namespace vex;
 using signature = vision::signature;
@@ -112,10 +113,11 @@ void moveStacker(float degrees, int speed, int direction)
 {
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
-  
-    // 2. Get the current motor encoder counter value
+
+    // 2a. Get the current motor encoder counter value
     double currentTicks = StackerMotor.rotation(vex::rotationUnits::raw)*direction;
 
+    // 2b. Adjust the ticks based on the global encoder counter
     ticks = ticks - currentTicks;
 
     // 3. Set the velocity of the motor to 'speed'
@@ -177,7 +179,6 @@ void moveStacker(float degrees, int speed, int direction)
     }
     // We are done moving the stacker  
 }
-
 void setStartingPosition() 
 {
   // Raise the arms
@@ -187,7 +188,6 @@ void setStartingPosition()
   // Bring the arms back to the starting position
   ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
 }
-
 void startSpinningClaws(int direction, int speed)
 {
   // 1. Set the speed for both the claws
@@ -430,12 +430,6 @@ void turnRobot(double deg, int speed, int direction)
   RightFrontMotor.setVelocity(speed,percent);
   RightBackMotor.setVelocity(speed,percent);
 
-  // Get the current gyro sensor value
-  double currentDeg = GyroSensor.rotation(degrees);
-
-  // Add the 'deg' to the current value as the new 'deg' value to turn
-  deg = deg - currentDeg; 
-
   if (direction > 0){
     LeftBackMotor.spin(forward);
     LeftFrontMotor.spin(forward);
@@ -452,9 +446,9 @@ void turnRobot(double deg, int speed, int direction)
   // Waits until the motor reaches a 90 degree turn and stops the Left and
   // Right Motors.
   if (direction > 0) {
-    waitUntil((GyroSensor.rotation(degrees) >= deg));//right
+    waitUntil((GyroSensor.rotation(degrees) >= deg));
   } else {
-    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));//left
+    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));
   }
 
   LeftFrontMotor.stop();
@@ -583,8 +577,11 @@ void moveArms(float degrees, int speed, int direction)
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
 
-    // 2. Set the initial motor encoder counter to 0
-    ArmMotor.setRotation(0, vex::rotationUnits::raw);
+    // 2a. Get the motor encoder counter
+    double currentTicks = ArmMotor.rotation(vex::rotationUnits::raw)*direction;
+
+    // 2b. Calculate the ticks to move
+    ticks = ticks = currentTicks;
   
     // 3. Set the velocity of the motor to 'speed'
     ArmMotor.setVelocity(speed, velocityUnits::pct);
@@ -653,7 +650,7 @@ void pre_auton(void) {
   while (GyroSensor.isCalibrating()) {
     wait(100, msec);
   }
-  Controller1.Screen.print("GyroSensor Calibrated"); 
+  Controller1.Screen.print("GyroSensor Calibrated");   
 
   // Set the Stacker motor encoder to 0
   StackerMotor.setRotation(0, vex::rotationUnits::raw);
@@ -711,12 +708,12 @@ void autonomous(void) {
 
   // Move backward to goal
   moveRobot(22,75,-1);
-  turnRobot(105,15,1);
-  moveRobot(14.5,50,1);
+  turnRobot(115,15,1);
+  moveRobot(13,50,1);
 
   moveStacker(500, 50, 1);
   //moveClaws(60,50,-1);
-  moveStacker(140, 20, 1);
+  moveStacker(150, 25, 1);
 
   moveRobot(8,25,-1);
 
@@ -733,6 +730,38 @@ void autonomous(void) {
  
   //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
 
+  // Drivetrain.driveFor(forward 1100 ticks
+  //Drivetrain.driveFor(reverse 1100 ticks
+
+  // 0. 1 point Auton 
+  /*
+  RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
+  LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
+
+  wait(1, timeUnits::sec);
+ 
+  RightFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,false);
+  LeftFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,true);
+ 
+  wait(1, timeUnits::sec);
+ 
+  // 1. Staring position open
+  StackerMotor.rotateFor(200, vex::rotationUnits::deg, false);
+ 
+  // 2. Raise the arms to open first part of stacker
+  ArmMotor.setVelocity(100, velocityUnits::pct); 
+  ArmMotor.rotateFor(420, vex::rotationUnits::deg);
+
+  // 3. Spin the claws outward to untangle the stacker if it gets stuck
+  RightClawMotor.rotateFor(180, vex::rotationUnits::deg, false);
+  LeftClawMotor.rotateFor(180, vex::rotationUnits::deg, true);
+
+  // 4. Bring the arms back to the starting position
+  ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
+
+  // 5. Bring the stacker back to the starting position
+  StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
+  */
 }
 
 /*---------------------------------------------------------------------------*/
@@ -744,8 +773,13 @@ void autonomous(void) {
 /*                                                                           */
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
-
+//button X is now forward button
+//Button B is now stacker automatic
+//Button Y is stacker forward manual 
+//Button A is stacker backward manual
 void usercontrol(void) {
+  //R2 & L2 are for sideDrive
+  //R1 & L1 are for claws
   // An instance of brain used for printing to the V5 Brain screen
   brain  Brain;
 
@@ -762,18 +796,18 @@ void usercontrol(void) {
   // define variables used for controlling motors based on controller inputs
   //bool Controller1LeftShoulderControlMotorsStopped = true;
   //bool Controller1RightShoulderControlMotorsStopped = true;
+  bool Controller1R2ButtonMotorsStopped = true;
   bool Controller1L1ButtonMotorsStopped = true;
   bool Controller1R1ButtonMotorsStopped = true;
   bool Controller1L2ButtonMotorsStopped = true;
   bool Controller1UpDownButtonsControlMotorsStopped = true;
   bool Controller1XBButtonsControlMotorsStopped = true;
   bool ControllerLeftButton = true;
-  bool ControllerRightButton = true;
-  bool ControllerAButton = true;
+  bool ControllerRightButton = false;
+  bool ControllerXButton = true;
   bool ControllerYButton = true;
   bool DrivetrainLeftNeedsToBeStopped_Controller1 = true;
   bool DrivetrainRightNeedsToBeStopped_Controller1 = true;
-  
 
   // User control code here, inside the loop
   while (1) {
@@ -785,7 +819,8 @@ void usercontrol(void) {
     // Insert user code here. This is where you use the joystick values to
     // update your motors, etc.
     // ........................................................................
-    // calculate the drivetrain motor velocities from the controller joystick axies
+
+      // calculate the drivetrain motor velocities from the controller joystick axies
     int drivetrainLeftAddSideSpeed = Controller1.Axis3.position() + Controller1.Axis4.position();
     int drivetrainLeftSubSideSpeed = Controller1.Axis3.position() - Controller1.Axis4.position();
 
@@ -840,11 +875,57 @@ void usercontrol(void) {
       RightFrontDriveSmart.spin(forward);
     }
 
+    if (Controller1.ButtonR2.pressing()) {    
+      LeftFrontMotor.setVelocity(100,percent);
+      LeftBackMotor.setVelocity(100, percent);
+      RightFrontMotor.setVelocity(100, percent);
+      RightBackMotor.setVelocity(100, percent);
+
+      LeftFrontMotor.spin(forward);
+      RightBackMotor.spin(forward);
+      LeftBackMotor.spin(reverse);
+      RightFrontMotor.spin(reverse);
+      
+      Controller1R2ButtonMotorsStopped = false;
+    } else if (!Controller1R2ButtonMotorsStopped) {
+       LeftFrontMotor.stop();
+       RightBackMotor.stop();
+       LeftBackMotor.stop();
+       RightFrontMotor.stop();
+
+       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+       Controller1R2ButtonMotorsStopped = true;
+    }
+    
+   
+    if (Controller1.ButtonL2.pressing()) {         
+      LeftFrontMotor.setVelocity(100,percent);
+      LeftBackMotor.setVelocity(100, percent);
+      RightFrontMotor.setVelocity(100, percent);
+      RightBackMotor.setVelocity(100, percent);
+
+      LeftFrontMotor.spin(reverse);
+      RightBackMotor.spin(reverse);
+      LeftBackMotor.spin(forward);
+      RightFrontMotor.spin(forward);
+
+      Controller1L2ButtonMotorsStopped = false;
+    } else if (!Controller1L2ButtonMotorsStopped) {
+      LeftFrontMotor.stop();
+      RightBackMotor.stop();
+      LeftBackMotor.stop();
+      RightFrontMotor.stop();
+
+      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+      Controller1L2ButtonMotorsStopped = true;
+    }
+    
+
     if (Controller1.ButtonL1.pressing()) {
       RightClawMotor.setVelocity(100, pct);
-      RightClawMotor.spin(forward);
-
       LeftClawMotor.setVelocity(100, pct);
+      
+      RightClawMotor.spin(forward);
       LeftClawMotor.spin(forward);
               
       Controller1L1ButtonMotorsStopped = false;
@@ -858,9 +939,9 @@ void usercontrol(void) {
     
     if (Controller1.ButtonR1.pressing()) {
       RightClawMotor.setVelocity(100, pct);
-      RightClawMotor.spin(reverse);
-
       LeftClawMotor.setVelocity(100, pct);
+      
+      RightClawMotor.spin(reverse);
       LeftClawMotor.spin(reverse);
           
       Controller1R1ButtonMotorsStopped = false;
@@ -870,50 +951,8 @@ void usercontrol(void) {
       // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
       Controller1R1ButtonMotorsStopped = true;
     }
-
-    if (Controller1.ButtonL2.pressing()) {
-      LeftFrontDriveSmart.setVelocity(25, pct);
-      RightFrontDriveSmart.setVelocity(25, pct);
-      RightBackDriveSmart.setVelocity(25, pct);
-      LeftBackDriveSmart.setVelocity(25, pct);
-      LeftFrontDriveSmart.spin(forward);
-      RightFrontDriveSmart.spin(forward);
-      RightBackDriveSmart.spin(forward);
-      LeftBackDriveSmart.spin(forward);
-  
-      Controller1L2ButtonMotorsStopped = false;
-
-    } else if (!Controller1L2ButtonMotorsStopped) {
-      LeftFrontDriveSmart.stop();
-      RightFrontDriveSmart.stop();
-      RightBackDriveSmart.stop();
-      LeftBackDriveSmart.stop();
-      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-      Controller1L2ButtonMotorsStopped = true;
-    }
-/*
-    if (Controller1.ButtonR2.pressing()) {
-      LeftFrontDriveSmart.setVelocity(100, pct);
-      RightFrontDriveSmart.setVelocity(100, pct);
-      RightBackDriveSmart.setVelocity(100, pct);
-      LeftBackDriveSmart.setVelocity(100, pct);
-      LeftFrontDriveSmart.spin(reverse);
-      RightFrontDriveSmart.spin(reverse);
-      RightBackDriveSmart.spin(reverse);
-      LeftBackDriveSmart.spin(reverse);
-  
-      Controller1R2ButtonMotorsStopped = false;
-
-    } else if (!Controller1R2ButtonMotorsStopped) {
-      LeftFrontDriveSmart.stop();
-      RightFrontDriveSmart.stop();
-      RightBackDriveSmart.stop();
-      LeftBackDriveSmart.stop();
-      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-      Controller1R2ButtonMotorsStopped = true;
-    }    
-    */
-    if (Controller1.ButtonY.pressing()) {
+//XX
+    if (Controller1.ButtonB.pressing()) {
         moveStacker(500, 50, 1);
         moveStacker(125, 20, 1);
         ControllerYButton = false;
@@ -923,17 +962,28 @@ void usercontrol(void) {
         // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
         ControllerYButton = true;
       }
+
+    if (Controller1.ButtonX.pressing()) {
+        LeftFrontDriveSmart.setVelocity(50, pct);
+        RightFrontDriveSmart.setVelocity(50, pct);
+        RightBackDriveSmart.setVelocity(50, pct);
+        LeftBackDriveSmart.setVelocity(50, pct);
+        LeftFrontDriveSmart.spin(forward);
+        RightFrontDriveSmart.spin(forward);
+        RightBackDriveSmart.spin(forward);
+        LeftBackDriveSmart.spin(forward);
     
-    if (Controller1.ButtonA.pressing()) {
-        moveStacker(625, 50, -1);
-        ControllerAButton = false;
-      } else if (!ControllerAButton){
-        StackerMotor.stop();
-        StackerMotor.setBrake(hold);
-        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-        ControllerAButton = true;
-      }
-    
+        ControllerXButton = false;
+
+      } else if (!ControllerXButton) {
+        LeftFrontDriveSmart.stop();
+        RightFrontDriveSmart.stop();
+        RightBackDriveSmart.stop();
+        LeftBackDriveSmart.stop();
+      // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
+      ControllerXButton = true;
+    }
+
     if (Controller1.ButtonLeft.pressing()) {
         moveArms(450, 50, 1);
         ControllerLeftButton = false;
@@ -945,21 +995,19 @@ void usercontrol(void) {
       }
 
     if (Controller1.ButtonRight.pressing()) {
-        moveStacker(200, 50, 1);
-        moveArms(675, 50, 1);
-        ControllerRightButton = false;
-      } else if (!ControllerRightButton){
-        ArmMotor.stop();
-        ArmMotor.setBrake(hold);
-        // set the toggle so that we don't constantly tell the motor to stop when the buttons are released
-        ControllerRightButton = true;
+        if (ControllerRightButton == false){
+          setStartingPosition();
+          ControllerRightButton = true;
+        }
       }
 
     // check the Up/Down Buttons status to control ArmMotor
     if (Controller1.ButtonUp.pressing()) {
+      ArmMotor.setVelocity(100,percent);
       ArmMotor.spin(forward);
       Controller1UpDownButtonsControlMotorsStopped = false;
     } else if (Controller1.ButtonDown.pressing()) {
+      ArmMotor.setVelocity(100,percent);
       ArmMotor.spin(reverse);
       Controller1UpDownButtonsControlMotorsStopped = false;
     } else if (!Controller1UpDownButtonsControlMotorsStopped){
@@ -970,12 +1018,12 @@ void usercontrol(void) {
     }
 
     // check the X/B buttons status to control StackerMotor
-    if (Controller1.ButtonX.pressing()) {
-      StackerMotor.setVelocity(25, percentUnits::pct);
+    if (Controller1.ButtonY.pressing()) {
+      StackerMotor.setVelocity(100, percentUnits::pct);
       StackerMotor.spin(forward);
       Controller1XBButtonsControlMotorsStopped = false;
-    } else if (Controller1.ButtonB.pressing()) {
-      StackerMotor.setVelocity(25, percentUnits::pct);
+    } else if (Controller1.ButtonA.pressing()) {
+      StackerMotor.setVelocity(100, percentUnits::pct);
       StackerMotor.spin(reverse);
       Controller1XBButtonsControlMotorsStopped = false;
     } else if (!Controller1XBButtonsControlMotorsStopped){

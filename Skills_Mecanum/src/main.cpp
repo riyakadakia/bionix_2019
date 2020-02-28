@@ -858,8 +858,7 @@ void usercontrol(void) {
         RightBackMotor.spin(fwd,back_right, velocityUnits::pct);
 
 
-    if (Controller1.ButtonR2.pressing()) {
-    
+    if (Controller1.ButtonR2.pressing()) {    
       LeftFrontMotor.setVelocity(100,percent);
       LeftBackMotor.setVelocity(100, percent);
       RightFrontMotor.setVelocity(100, percent);
@@ -872,11 +871,6 @@ void usercontrol(void) {
       
       Controller1R2ButtonMotorsStopped = false;
     } else if (!Controller1R2ButtonMotorsStopped) {
-      
-      
-       RightClawMotor.stop();
-       LeftClawMotor.stop();
-       
        LeftFrontMotor.stop();
        RightBackMotor.stop();
        LeftBackMotor.stop();
@@ -887,8 +881,7 @@ void usercontrol(void) {
     }
     
    
-    if (Controller1.ButtonL2.pressing()) {
-          
+    if (Controller1.ButtonL2.pressing()) {         
       LeftFrontMotor.setVelocity(100,percent);
       LeftBackMotor.setVelocity(100, percent);
       RightFrontMotor.setVelocity(100, percent);
@@ -901,10 +894,6 @@ void usercontrol(void) {
 
       Controller1L2ButtonMotorsStopped = false;
     } else if (!Controller1L2ButtonMotorsStopped) {
-      
-      RightClawMotor.stop();
-      LeftClawMotor.stop();
-      
       LeftFrontMotor.stop();
       RightBackMotor.stop();
       LeftBackMotor.stop();
@@ -917,9 +906,9 @@ void usercontrol(void) {
 
     if (Controller1.ButtonL1.pressing()) {
       RightClawMotor.setVelocity(100, pct);
-      RightClawMotor.spin(forward);
-
       LeftClawMotor.setVelocity(100, pct);
+      
+      RightClawMotor.spin(forward);
       LeftClawMotor.spin(forward);
               
       Controller1L1ButtonMotorsStopped = false;
@@ -933,9 +922,9 @@ void usercontrol(void) {
     
     if (Controller1.ButtonR1.pressing()) {
       RightClawMotor.setVelocity(100, pct);
-      RightClawMotor.spin(reverse);
-
       LeftClawMotor.setVelocity(100, pct);
+      
+      RightClawMotor.spin(reverse);
       LeftClawMotor.spin(reverse);
           
       Controller1R1ButtonMotorsStopped = false;
@@ -987,9 +976,11 @@ void usercontrol(void) {
 
     // check the Up/Down Buttons status to control ArmMotor
     if (Controller1.ButtonUp.pressing()) {
+      ArmMotor.setVelocity(100,percent);
       ArmMotor.spin(forward);
       Controller1UpDownButtonsControlMotorsStopped = false;
     } else if (Controller1.ButtonDown.pressing()) {
+      ArmMotor.setVelocity(100,percent);
       ArmMotor.spin(reverse);
       Controller1UpDownButtonsControlMotorsStopped = false;
     } else if (!Controller1UpDownButtonsControlMotorsStopped){
@@ -1001,11 +992,11 @@ void usercontrol(void) {
 
     // check the X/B buttons status to control StackerMotor
     if (Controller1.ButtonX.pressing()) {
-      StackerMotor.setVelocity(25, percentUnits::pct);
+      StackerMotor.setVelocity(100, percentUnits::pct);
       StackerMotor.spin(forward);
       Controller1XBButtonsControlMotorsStopped = false;
     } else if (Controller1.ButtonB.pressing()) {
-      StackerMotor.setVelocity(25, percentUnits::pct);
+      StackerMotor.setVelocity(100, percentUnits::pct);
       StackerMotor.spin(reverse);
       Controller1XBButtonsControlMotorsStopped = false;
     } else if (!Controller1XBButtonsControlMotorsStopped){
