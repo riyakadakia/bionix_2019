@@ -26,6 +26,7 @@
 
 #include "vex.h"
 #include <cmath>
+#include <chrono>
 
 using namespace vex;
 using signature = vision::signature;
@@ -188,6 +189,21 @@ void moveStacker(float degrees, int speed, int direction)
       } 
     }
     // We are done moving the stacker  
+}
+
+void startMovingStacker(int direction, int speed) {
+
+  StackerMotor.setVelocity(speed, percent);
+  if (direction > 0) {
+    StackerMotor.spin(forward);
+  }
+  else if (direction < 0) {
+    StackerMotor.spin(reverse);
+  }
+}
+
+void stopMovingStacker() {
+  StackerMotor.stop();
 }
 
 void startSpinningClaws(int direction, int speed)
@@ -1043,6 +1059,9 @@ void pre_auton(void) {
 
 void autonomous(void) {
   
+
+std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
   // ..........................................................................
   setStartingPosition();
 
@@ -1065,6 +1084,7 @@ void autonomous(void) {
   // Pick up cube #4
   wait(WAIT_FOR_CUBE_INTAKE, sec);
   */
+
   wait(3700, msec);
   stopMovingRobot();
   wait(400, msec);
@@ -1127,6 +1147,7 @@ void autonomous(void) {
       bumperStopped = true;
     }
   }
+
   /*
   LeftFrontMotor.stop();
   RightFrontMotor.stop();
@@ -1134,20 +1155,27 @@ void autonomous(void) {
   RightBackMotor.stop();
   */
   
+
+  // moveStacker(400, 100, 1); // XXX DELETE ME
+
   startSpinningClaws(1, 10);
-
-  moveStacker(200, 75, 1);
+  moveStacker(200, 100, 1);
   moveStacker(150, 25, 1);
-
   stopSpinningClaws();
 
   //StackerMotor.setVelocity(100, percent);
   //StackerMotor.rotateFor(-400, vex::rotationUnits::deg, false);
+
   moveStacker(300, 100, -1);
-  startSpinningClaws(1,35);
-  wait(0.8, sec);
-  moveRobot(8,100,-1);
+  startSpinningClaws(1,100);
+  wait(450, msec);
+  moveRobot(5,100,-1);
   stopSpinningClaws();
+
+std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+logTextClearScreen("Time");
+logText("E: ", (double)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
 
 /*
   // Move backward to goal
