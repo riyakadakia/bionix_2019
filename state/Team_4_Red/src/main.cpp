@@ -211,6 +211,15 @@ void startSpinningClaws(int direction, int speed)
   // We are done starting to spin the claw motors at the 'speed'
 }
 
+void stopSpinningClaws()
+{
+  // Stop spinning the claws
+    LeftClawMotor.stop();
+    RightClawMotor.stop();
+
+  // We are done stopping to spin the claw motors
+}
+
 void startMovingRobot(int speed, int direction) {
   // Set the velocity of the motors to 'speed'
   LeftFrontMotor.setVelocity(speed, velocityUnits::pct);
@@ -441,15 +450,6 @@ void moveRobot(float inches, int speed, int direction)
           } 
     }
     // We are done moving the robot
-}
-
-void stopSpinningClaws()
-{
-  // Stop spinning the claws
-    LeftClawMotor.stop();
-    RightClawMotor.stop();
-
-  // We are done stopping to spin the claw motors
 }
 
  void turnRobotHeading(double deg, int speed)
@@ -696,11 +696,13 @@ void moveArms(float degrees, int speed, int direction)
     // 1. Convert degrees into ticks
     double ticks = convertDegreesIntoTicks_36(degrees);
 
+/*
     // 2a. Get the motor encoder counter
     double currentTicks = ArmMotor.rotation(vex::rotationUnits::raw)*direction;
 
     // 2b. Calculate the ticks to move
     ticks = ticks = currentTicks;
+*/
   
     // 3. Set the velocity of the motor to 'speed'
     ArmMotor.setVelocity(speed, velocityUnits::pct);
@@ -821,14 +823,6 @@ void pre_auton(void) {
   GyroSensor.setHeading(0, degrees);
 
   Controller1.Screen.print("GyroSensor Calibrated");   
-
-  // Set the Stacker motor encoder to 0
-  StackerMotor.setRotation(0, vex::rotationUnits::raw);
-
-  // Set the Arm motor encoder to 0
-  ArmMotor.setRotation(0, vex::rotationUnits::raw);
-
-  Controller1.Screen.print("Stacker & Arm motors counters reset"); 
 
   // All activities that occur before the competition starts
   // Example: clearing encoders, setting servo positions, ...

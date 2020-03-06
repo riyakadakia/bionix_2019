@@ -19,6 +19,7 @@ motor RightFrontMotor = motor(PORT9, ratio18_1, true);
 motor LeftBackMotor = motor(PORT8, ratio18_1, false);
 motor RightBackMotor = motor(PORT1, ratio18_1, true);
 bumper BumperA = bumper(Brain.ThreeWirePort.A);
+bumper BumperH = bumper(Brain.ThreeWirePort.H);
 
 // VEXcode generated functions
 // define variable for remote controller enable/disable
