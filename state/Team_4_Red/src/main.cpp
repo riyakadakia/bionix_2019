@@ -982,7 +982,7 @@ void autonomous(void) {
   // VEXcode device constructors
   motor RightFrontBaseMotor = motor(PORT9, ratio18_1, false);
   motor LeftFrontBaseMotor = motor(PORT10, ratio18_1, false);
-  motor LeftDriveSmart = motor(PORT2, ratio18_1, false);
+  motor LeftDriveSmart = motor(PORT8, ratio18_1, false);
   motor RightDriveSmart = motor(PORT1, ratio18_1, true);
  
   //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
