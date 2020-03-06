@@ -26,6 +26,7 @@
 
 #include "vex.h"
 #include <cmath>
+#include <chrono>
 
 using namespace vex;
 using signature = vision::signature;
@@ -188,6 +189,21 @@ void moveStacker(float degrees, int speed, int direction)
       } 
     }
     // We are done moving the stacker  
+}
+
+void startMovingStacker(int direction, int speed) {
+
+  StackerMotor.setVelocity(speed, percent);
+  if (direction > 0) {
+    StackerMotor.spin(forward);
+  }
+  else if (direction < 0) {
+    StackerMotor.spin(reverse);
+  }
+}
+
+void stopMovingStacker() {
+  StackerMotor.stop();
 }
 
 void startSpinningClaws(int direction, int speed)
@@ -1042,31 +1058,9 @@ void pre_auton(void) {
 /*---------------------------------------------------------------------------*/
 
 void autonomous(void) {
-  /*
-  turnRobotHeading(90, 25);
-  wait(3, sec);
-  turnRobotHeading(0, 25);
-  wait(3, sec);
-*/
   // ..........................................................................
-  //setStartingPosition();
-  //startSpinningClaws(-1, 100);
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-  // Pick up the pre-load
-  //wait(WAIT_FOR_CUBE_INTAKE, sec);
-
-  // waits for the Inertial Sensor to calibrate
-  /*while (GyroSensor.isCalibrating()) {
-    wait(100, msec);
-  }*/
-  
-  //moveRobot(22,50,1);
-  //stopSpinningClaws();
-
-  // first move right for 10 inches at 50% speed
- // moveSideDrive(24,25,1);
-
- 
   setStartingPosition();
 
   startSpinningClaws(-1, 100);
@@ -1074,28 +1068,39 @@ void autonomous(void) {
   // Pick up the pre-load
   // wait(WAIT_FOR_CUBE_INTAKE, sec);
   
-  moveRobot(12,50,1);
-  moveRobot(6,25,1); 
+  //moveRobot(12,50,1);
+  startMovingRobot(30, 1);
   
-  // Pick up cube #1
-  wait(WAIT_FOR_CUBE_INTAKE, sec);
-  for (int i = 0; i < 2; i++){
+  /*for (int i = 0; i < 3; i++){
     moveRobot(6,25,1);
-    // Pick up cube #2 & #3
+    // Pick up cube #1, #2 & #3
     wait(WAIT_FOR_CUBE_INTAKE,sec);
   }
-  wait(600, msec);
+  // wait(600, msec);
   moveRobot(9,25,1);
 
   // Pick up cube #4
-  wait(300, msec);
+  wait(WAIT_FOR_CUBE_INTAKE, msec);
+  */
 
+  wait(3700, msec);
+  stopMovingRobot();
+  wait(400, msec);
+  
+  // Move back and onto the next set of cubes
+  moveRobot(35,50,-1);
+  moveSideDrive(28,15,-1);
+  turnRobotHeading(0,10);
+  wait(500, msec);
 
-  moveRobot(27,50,-1);
+  // Pick up the next set of cubes
+  startMovingRobot(30, 1);
+  wait(2500, msec);
+  stopMovingRobot();
+  wait(400, msec);
+  stopSpinningClaws();
 
-  moveSideDrive(28,25,-1);
-  turnRobotHeading(0,50);
-  wait(0.5, sec);
+/*
   moveRobot(11,25,1); 
   //Picking up second stack
   // Pick up cube #5
@@ -1108,13 +1113,21 @@ void autonomous(void) {
   wait(600, msec);
   moveRobot(10,25,1);
   stopSpinningClaws();
+*/
 
-  moveRobot(35,50,-1);
-  turnRobotHeading(90,50);
+  // Now move back toward the goal
+  startMovingRobot(100, -1);
+  wait(1000, msec);
+  stopMovingRobot();
+  
+  //moveRobot(35,50,-1);
+  turnRobotHeading(90,15);
+
   moveRobot(23,50,1);
   startSideDrive(1,100);
-  wait(1, sec);
+  wait(1000, msec);
   stopSideDrive();
+
   //moveSideDrive(26, 25, 1);
   //turnRobot(75,50,1);
   //turnRobotHeading(90,25,1);
@@ -1123,104 +1136,60 @@ void autonomous(void) {
   //turnRobot(1,25,-1);
   //turnRobotHeading(70,25,-1);
 
-  LeftFrontMotor.setVelocity(25, percent);
-  RightFrontMotor.setVelocity(25, percent);
-  LeftBackMotor.setVelocity(25, percent);
-  RightBackMotor.setVelocity(25, percent);  
+//---------------------
+  LeftFrontMotor.setVelocity(15, percent);
+  RightFrontMotor.setVelocity(15, percent);
+  LeftBackMotor.setVelocity(15, percent);
+  RightBackMotor.setVelocity(15, percent);  
 
   LeftFrontMotor.spin(forward);
   RightFrontMotor.spin(forward);
   LeftBackMotor.spin(forward);
-  RightBackMotor.spin(forward);   
+  RightBackMotor.spin(forward);      
 
-  waitUntil(BumperA.pressing());
-  
-  LeftFrontMotor.stop();
-  RightFrontMotor.stop();
-  LeftBackMotor.stop();
-  RightBackMotor.stop(); 
+  int stackerDegrees = 0;
+  bool bumperStopped = false;
+  while (stackerDegrees < 400 || bumperStopped == false) {
+    if (stackerDegrees < 400) {
+      moveStacker(50, 75, 1); 
+      stackerDegrees += 50;
+    }
+    if (bumperStopped == false && BumperA.pressing()) {
+      LeftFrontMotor.stop();
+      RightFrontMotor.stop();
+      LeftBackMotor.stop();
+      RightBackMotor.stop();
+      bumperStopped = true;
+    }
+  }
 
-  startSpinningClaws(1,5);
-
-  moveStacker(750, 25, 1);
-
+  startSpinningClaws(1, 10);
+  moveStacker(200, 100, 1);
+  moveStacker(150, 25, 1);
   stopSpinningClaws();
 
-  wait(1, sec);
-
-  moveStacker(750, 25, -1);
-  startSpinningClaws(1,25);
-  wait(0.8, sec);
+  moveStacker(300, 100, -1);
+  startSpinningClaws(1,100);
+  wait(450, msec);
+  moveRobot(5,100,-1);
   stopSpinningClaws();
 
-  moveRobot(12,25,-1);
 // done stacking 7 stack
 
-  turnRobotHeading(0,50);
+  turnRobotHeading(-5,10);
   moveRobot(40,50,1);
 
-
-
-
   startSpinningClaws(-1, 50);
-  wait(1.5, sec);
+  wait(1100, msec);
   stopSpinningClaws();
-  wait(3, sec);
-  //moveRobot(2,50,-1);
-  wait(3, sec);
   moveArms(450,50,1);
   moveRobot(7,50,1);
   startSpinningClaws(1,50);
-  wait(1, sec);
+  wait(1000, msec);
   stopSpinningClaws();
+  
   // next move left for 10 inches at 25% speed
   
-
-  // ..........................................................................
-/*
-  // An instance of brain used for printing to the V5 Brain screen
-  brain  Brain;
-
-  // VEXcode device constructors
-  motor RightFrontBaseMotor = motor(PORT9, ratio18_1, false);
-  motor LeftFrontBaseMotor = motor(PORT10, ratio18_1, false);
-  motor LeftDriveSmart = motor(PORT8, ratio18_1, false);
-  motor RightDriveSmart = motor(PORT1, ratio18_1, true);
- 
-  //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
-
-  // Drivetrain.driveFor(forward 1100 ticks
-  //Drivetrain.driveFor(reverse 1100 ticks
-
-  // 0. 1 point Auton 
-  
-  RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
-
-  wait(1, timeUnits::sec);
- 
-  RightFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,true);
- 
-  wait(1, timeUnits::sec);
- 
-  // 1. Staring position open
-  StackerMotor.rotateFor(200, vex::rotationUnits::deg, false);
- 
-  // 2. Raise the arms to open first part of stacker
-  ArmMotor.setVelocity(100, velocityUnits::pct); 
-  ArmMotor.rotateFor(420, vex::rotationUnits::deg);
-
-  // 3. Spin the claws outward to untangle the stacker if it gets stuck
-  RightClawMotor.rotateFor(180, vex::rotationUnits::deg, false);
-  LeftClawMotor.rotateFor(180, vex::rotationUnits::deg, true);
-
-  // 4. Bring the arms back to the starting position
-  ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
-
-  // 5. Bring the stacker back to the starting position
-  StackerMotor.rotateFor(-200, vex::rotationUnits::deg, false);
-  */
 }
 
 /*---------------------------------------------------------------------------*/
