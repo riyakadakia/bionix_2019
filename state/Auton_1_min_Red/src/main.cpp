@@ -797,6 +797,207 @@ void stopSideDrive()
   RightFrontMotor.stop();
 }
 
+void moveSideDrive (float inches, int speed, int direction)
+{ 
+    // 1. Convert inches into ticks
+    double ticks = convertInchesIntoTicks_18(inches*1.25);
+
+    // 2. Set the initial motor encoder counters to 0
+    LeftFrontMotor.setRotation(0, vex::rotationUnits::raw);
+    LeftBackMotor.setRotation(0, vex::rotationUnits::raw);
+    RightFrontMotor.setRotation(0, vex::rotationUnits::raw);
+    RightBackMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motors to 'speed'
+    LeftFrontMotor.setVelocity(speed, velocityUnits::pct);
+    RightFrontMotor.setVelocity(speed, velocityUnits::pct);
+    LeftBackMotor.setVelocity(speed, velocityUnits::pct);
+    RightBackMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variables and set them to 0
+    double ticksLFM = 0;
+    double ticksRFM = 0;
+    double ticksLBM = 0;
+    double ticksRBM = 0;
+    double lastTicksRFM = 0;
+    int RFMotorNotMoved = 0;
+    int LFMotorNotMoved = 0;
+    int RBMotorNotMoved = 0;
+    int LBMotorNotMoved = 0;
+    double lastTicksLFM = 0;
+    double lastTicksRBM = 0;
+    double lastTicksLBM = 0;
+    double moveRFMTicks = 0;
+    double moveLFMTicks = 0;
+    double moveLBMTicks = 0;
+    double moveRBMTicks = 0;
+
+    // 5. Loop - while (any counter variable < ticks)
+    while (ticksLFM < ticks || ticksRFM < ticks || 
+           ticksLBM < ticks || ticksRBM < ticks) {
+      
+          if (ticksLFM < ticks) {
+            moveLFMTicks = 0;
+
+            // read the counter value
+            ticksLFM = LeftFrontMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksLFM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLFMTicks = TICKS_PER_LOOP;
+            } else {
+              moveLFMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            LeftFrontMotor.rotateFor(moveLFMTicks*direction, vex::rotationUnits::raw, false);
+          }
+
+          if (ticksLBM < ticks) {
+            moveLBMTicks = 0;
+
+            // read the counter value
+            ticksLBM = LeftBackMotor.rotation(vex::rotationUnits::raw)*direction*-1;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksLBM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveLBMTicks = TICKS_PER_LOOP;
+            } else {
+              moveLBMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            LeftBackMotor.rotateFor(moveLBMTicks*direction*-1, vex::rotationUnits::raw, false);
+          }
+
+          if (ticksRBM < ticks) {
+            moveRBMTicks = 0;
+
+            // read the counter value
+            ticksRBM = RightBackMotor.rotation(vex::rotationUnits::raw)*direction;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksRBM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRBMTicks = TICKS_PER_LOOP;
+            } else {
+              moveRBMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            RightBackMotor.rotateFor(moveRBMTicks*direction, vex::rotationUnits::raw, false);
+          }   
+
+          if (ticksRFM < ticks) {
+            double moveRFMTicks = 0;
+
+            // read the counter value
+            ticksRFM = RightFrontMotor.rotation(vex::rotationUnits::raw)*direction*-1;
+
+            // calculate remainingTicks to move
+            double remainingTicks = ticks - ticksRFM;
+
+            // if remainingTicks > TICKS_PER_LOOP, set moveTicks (variable) = TICKS_PER_LOOP
+            // else set moveTicks = remainingTicks
+            if (remainingTicks > TICKS_PER_LOOP) {
+              moveRFMTicks = TICKS_PER_LOOP;
+            } else {
+              moveRFMTicks = remainingTicks;
+            }
+
+            // rotateFor(moveTicks, raw, false)
+            RightFrontMotor.rotateFor(moveRFMTicks*direction*-1, vex::rotationUnits::raw, false);
+          }
+
+          /*
+              Motor rotates at 200rpm @ 100% speed
+              => 3.33 rps (revolutions per second)
+              => 3,000 ticks per second (for 900 ticks/revolution)
+              @ 100% speed
+              1 inch = 69.44 ticks => 0.023146 seconds => 23.146 ms
+              TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                             will take TICKS_PER_LOOP*0.333 msec
+              @ 75% speed
+              1 inch = 69.44 ticks => 0.030862 seconds => 30.862 ms
+              TICKS_PER_LOOP will take TICKS_PER_LOOP*0.33333/(75/100) msec 
+                             will take TICKS_PER_LOOP*33.333/75 msec
+                                       
+          */ 
+          double maxTicksToMove = 0;
+          if (moveRFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRFMTicks;
+          }
+          if (moveLFMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLFMTicks;
+          }
+          if (moveRBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveRBMTicks;
+          }
+          if (moveLBMTicks > maxTicksToMove) {
+            maxTicksToMove = moveLBMTicks;
+          }
+          wait(maxTicksToMove*33.333/speed, msec);
+
+          if (ticksRFM == lastTicksRFM) {
+            RFMotorNotMoved++;
+            if (RFMotorNotMoved >= MAX_SIDEDRIVE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // RightFrontMotor has not moved for max retries times. Break out of while loop
+              return;
+            }
+          } else {
+            // reset the value of RightFrontMotorNotMoved
+            RFMotorNotMoved = 0;
+            lastTicksRFM = ticksRFM;
+          } 
+          if (ticksLFM == lastTicksLFM) {
+            LFMotorNotMoved++;
+            if (LFMotorNotMoved >= MAX_SIDEDRIVE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // LeftFrontMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of LeftFrontMotorNotMoved
+            LFMotorNotMoved = 0;
+            lastTicksLFM = ticksLFM;
+          } 
+          if (ticksRBM == lastTicksRBM) {
+            RBMotorNotMoved++;
+            if (RBMotorNotMoved >= MAX_SIDEDRIVE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // RightBackMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of RightBackMotorNotMoved
+            RBMotorNotMoved = 0;
+            lastTicksRBM = ticksRBM;
+          } 
+          if (ticksLBM == lastTicksLBM) {
+            LBMotorNotMoved++;
+            if (LBMotorNotMoved >= MAX_SIDEDRIVE_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+              // LeftBackMotor has not moved for max retries times. Break out of while loop
+              break;
+            }
+          } else {
+            // reset the value of LeftBackMotorNotMoved
+            LBMotorNotMoved = 0;
+            lastTicksLBM = ticksLBM;
+          } 
+    }
+    // We are done side driving the robot 
+
+}
+
 void setStartingPosition() 
 {
   // Raise the arms
