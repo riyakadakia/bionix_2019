@@ -13,12 +13,12 @@
 // ArmMotor             motor         6               
 // StackerMotor         motor         7               
 // Controller1          controller                    
-// LeftClawMotor        motor         8               
+// LeftClawMotor        motor         4               
 // RightClawMotor       motor         3               
-// GyroSensor           inertial      4               
+// GyroSensor           inertial      15              
 // LeftFrontMotor       motor         10              
 // RightFrontMotor      motor         9               
-// LeftBackMotor        motor         2               
+// LeftBackMotor        motor         8               
 // RightBackMotor       motor         1               
 // ---- END VEXCODE CONFIGURED DEVICES ----
 
@@ -175,15 +175,7 @@ void moveStacker(float degrees, int speed, int direction)
     }
     // We are done moving the stacker  
 }
-void setStartingPosition() 
-{
-  // Raise the arms
-  ArmMotor.setVelocity(100, velocityUnits::pct); 
-  ArmMotor.rotateFor(400, vex::rotationUnits::deg);
 
-  // Bring the arms back to the starting position
-  ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
-}
 void startSpinningClaws(int direction, int speed)
 {
   // 1. Set the speed for both the claws
@@ -205,10 +197,185 @@ void startSpinningClaws(int direction, int speed)
 
   // We are done starting to spin the claw motors at the 'speed'
 }
+void stopSpinningClaws()
+{
+  // Stop spinning the claws
+    LeftClawMotor.stop();
+    RightClawMotor.stop();
+
+  // We are done stopping to spin the claw motors
+}
+
+void setStartingPosition() 
+{
+  // Raise the arms
+  ArmMotor.setVelocity(100, velocityUnits::pct); 
+  ArmMotor.rotateFor(500, vex::rotationUnits::deg, false);
+
+  // Begin the outtake claws
+  startSpinningClaws(1, 100);
+  wait(1.75, sec);
+
+  // Stop spinning claws
+  stopSpinningClaws();
+
+  // Bring the arms back to the starting position
+  ArmMotor.rotateFor(-500, vex::rotationUnits::deg);
+}
+
+
+void turnRobot(double deg, int speed, int direction)
+ {
+  // Initializing Robot Configuration. DO NOT REMOVE!
+  LeftBackMotor.setVelocity(speed,percent);
+  LeftFrontMotor.setVelocity(speed,percent);
+  RightFrontMotor.setVelocity(speed,percent);
+  RightBackMotor.setVelocity(speed,percent);
+
+  if (direction > 0){
+    LeftBackMotor.spin(forward);
+    LeftFrontMotor.spin(forward);
+    RightFrontMotor.spin(reverse);
+    RightBackMotor.spin(reverse);
+  }
+  else {
+    LeftBackMotor.spin(reverse);
+    LeftFrontMotor.spin(reverse);
+    RightFrontMotor.spin(forward); 
+    RightBackMotor.spin(forward);
+  }
+
+  // Waits until the motor reaches a 90 degree turn and stops the Left and
+  // Right Motors.
+  if (direction > 0) {
+    waitUntil((GyroSensor.rotation(degrees) >= deg));
+  } else {
+    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));
+  }
+
+  LeftFrontMotor.stop();
+  RightFrontMotor.stop();
+  LeftBackMotor.stop();
+  RightBackMotor.stop();
+}
+
+void moveClaws(float degrees, int speed, int direction) 
+{
+    // 1. Convert inches into ticks
+    double ticks = convertDegreesIntoTicks_36(degrees);
+
+    // 2. Set the initial motor encoder counters to 0
+    LeftClawMotor.setRotation(0, vex::rotationUnits::raw);
+    RightClawMotor.setRotation(0, vex::rotationUnits::raw);
+  
+    // 3. Set the velocity of the motors to 'speed'
+    LeftClawMotor.setVelocity(speed, velocityUnits::pct);
+    RightClawMotor.setVelocity(speed, velocityUnits::pct);
+
+    // 4. Create counter variables and set them to 0
+    double ticksLCM = 0;
+    double ticksRCM = 0;
+    double lastTicksLCM = 0;
+    double lastTicksRCM = 0;
+    int LCMotorNotMoved = 0;
+    int RCMotorNotMoved = 0;
+
+    // 5. Loop - while (any counter variable < ticks)
+    double moveLCMTicks = 0;
+    double moveRCMTicks = 0;
+
+    while (ticksLCM < ticks || ticksRCM < ticks) { 
+      if (ticksLCM < ticks) {
+        moveLCMTicks = 0;
+
+        // read the counter value
+        ticksLCM = LeftClawMotor.rotation(vex::rotationUnits::raw)*direction;
+
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksLCM;
+
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveLCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveLCMTicks = remainingTicks;
+        }
+
+        // rotateFor(moveTicks, raw, false)
+        LeftClawMotor.rotateFor(moveLCMTicks*direction, vex::rotationUnits::raw, false);
+      }
+
+      if (ticksRCM < ticks) {
+        moveRCMTicks = 0;
+
+        // read the counter value
+        ticksRCM = RightClawMotor.rotation(vex::rotationUnits::raw)*direction;
+
+        // calculate remainingTicks to move
+        double remainingTicks = ticks - ticksRCM;
+
+        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
+        // else set moveTicks = remainingTicks
+        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
+          moveRCMTicks = TICKS_PER_LOOP_CLAWS;
+        } else {
+          moveRCMTicks = remainingTicks;
+        }
+
+        // rotateFor(moveTicks, raw, false)
+        RightClawMotor.rotateFor(moveRCMTicks*direction, vex::rotationUnits::raw, false);
+      }   
+
+      /*
+        Motor rotates at 100rpm @ 100% speed (36:1)
+        => 1.6667 rps (revolutions per second)
+        => 3,000 ticks per second (for 1,800 ticks/revolution)
+
+        @ 100% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
+                       will take TICKS_PER_LOOP*0.333 msec
+
+        @ 75% speed
+        TICKS_PER_LOOP will take TICKS_PER_LOOP*0.333/(75/100) msec 
+                       will take TICKS_PER_LOOP*33.33/75 msec                                 
+      */ 
+
+      if (moveRCMTicks > moveLCMTicks) {
+        wait(moveRCMTicks*33.33/speed, msec);
+      } else {
+        wait(moveLCMTicks*33.33/speed, msec);
+      }
+
+      if (ticksLCM == lastTicksLCM) {
+        LCMotorNotMoved++;
+        if (LCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // LeftClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        LCMotorNotMoved = 0;
+        lastTicksLCM = ticksLCM;
+      } 
+
+      if (ticksRCM == lastTicksRCM) {
+        RCMotorNotMoved++;
+        if (RCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
+          // RightClawMotor has not moved for max retries times. Break out of while loop
+          break;
+        }
+      } else {
+        // reset the value of LCMotorNotMoved
+        RCMotorNotMoved = 0;
+        lastTicksRCM = ticksRCM;
+      }
+    }
+    // We are done moving the claws
+}
 
 void moveRobot(float inches, int speed, int direction) 
 {
- 
     // 1. Convert inches into ticks
     double ticks = convertInchesIntoTicks_18(inches);
 
@@ -409,165 +576,6 @@ void moveRobot(float inches, int speed, int direction)
     // We are done moving the robot
 }
 
-void stopSpinningClaws()
-{
-  // Stop spinning the claws
-    LeftClawMotor.stop();
-    RightClawMotor.stop();
-
-  // We are done stopping to spin the claw motors
-}
-
-void turnRobot(double deg, int speed, int direction)
- {
-  // Initializing Robot Configuration. DO NOT REMOVE!
-  LeftBackMotor.setVelocity(speed,percent);
-  LeftFrontMotor.setVelocity(speed,percent);
-  RightFrontMotor.setVelocity(speed,percent);
-  RightBackMotor.setVelocity(speed,percent);
-
-  if (direction > 0){
-    LeftBackMotor.spin(forward);
-    LeftFrontMotor.spin(forward);
-    RightFrontMotor.spin(reverse);
-    RightBackMotor.spin(reverse);
-  }
-  else {
-    LeftBackMotor.spin(reverse);
-    LeftFrontMotor.spin(reverse);
-    RightFrontMotor.spin(forward); 
-    RightBackMotor.spin(forward);
-  }
-
-  // Waits until the motor reaches a 90 degree turn and stops the Left and
-  // Right Motors.
-  if (direction > 0) {
-    waitUntil((GyroSensor.rotation(degrees) >= deg));
-  } else {
-    waitUntil((GyroSensor.rotation(degrees) <= deg*-1));
-  }
-
-  LeftFrontMotor.stop();
-  RightFrontMotor.stop();
-  LeftBackMotor.stop();
-  RightBackMotor.stop();
-}
-
-void moveClaws(float degrees, int speed, int direction) 
-{
-    // 1. Convert inches into ticks
-    double ticks = convertDegreesIntoTicks_36(degrees);
-
-    // 2. Set the initial motor encoder counters to 0
-    LeftClawMotor.setRotation(0, vex::rotationUnits::raw);
-    RightClawMotor.setRotation(0, vex::rotationUnits::raw);
-  
-    // 3. Set the velocity of the motors to 'speed'
-    LeftClawMotor.setVelocity(speed, velocityUnits::pct);
-    RightClawMotor.setVelocity(speed, velocityUnits::pct);
-
-    // 4. Create counter variables and set them to 0
-    double ticksLCM = 0;
-    double ticksRCM = 0;
-    double lastTicksLCM = 0;
-    double lastTicksRCM = 0;
-    int LCMotorNotMoved = 0;
-    int RCMotorNotMoved = 0;
-
-    // 5. Loop - while (any counter variable < ticks)
-    double moveLCMTicks = 0;
-    double moveRCMTicks = 0;
-
-    while (ticksLCM < ticks || ticksRCM < ticks) { 
-      if (ticksLCM < ticks) {
-        moveLCMTicks = 0;
-
-        // read the counter value
-        ticksLCM = LeftClawMotor.rotation(vex::rotationUnits::raw)*direction;
-
-        // calculate remainingTicks to move
-        double remainingTicks = ticks - ticksLCM;
-
-        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
-        // else set moveTicks = remainingTicks
-        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
-          moveLCMTicks = TICKS_PER_LOOP_CLAWS;
-        } else {
-          moveLCMTicks = remainingTicks;
-        }
-
-        // rotateFor(moveTicks, raw, false)
-        LeftClawMotor.rotateFor(moveLCMTicks*direction, vex::rotationUnits::raw, false);
-      }
-
-      if (ticksRCM < ticks) {
-        moveRCMTicks = 0;
-
-        // read the counter value
-        ticksRCM = RightClawMotor.rotation(vex::rotationUnits::raw)*direction;
-
-        // calculate remainingTicks to move
-        double remainingTicks = ticks - ticksRCM;
-
-        // if remainingTicks > TICKS_PER_LOOP_CLAWS, set moveTicks (variable) = TICKS_PER_LOOP_CLAWS
-        // else set moveTicks = remainingTicks
-        if (remainingTicks > TICKS_PER_LOOP_CLAWS) {
-          moveRCMTicks = TICKS_PER_LOOP_CLAWS;
-        } else {
-          moveRCMTicks = remainingTicks;
-        }
-
-        // rotateFor(moveTicks, raw, false)
-        RightClawMotor.rotateFor(moveRCMTicks*direction, vex::rotationUnits::raw, false);
-      }   
-
-      /*
-        Motor rotates at 100rpm @ 100% speed (36:1)
-        => 1.6667 rps (revolutions per second)
-        => 3,000 ticks per second (for 1,800 ticks/revolution)
-
-        @ 100% speed
-        TICKS_PER_LOOP will take TICKS_PER_LOOP/3,000 secs => TICKS_PER_LOOP*1000/3000 msec
-                       will take TICKS_PER_LOOP*0.333 msec
-
-        @ 75% speed
-        TICKS_PER_LOOP will take TICKS_PER_LOOP*0.333/(75/100) msec 
-                       will take TICKS_PER_LOOP*33.33/75 msec                                 
-      */ 
-
-      if (moveRCMTicks > moveLCMTicks) {
-        wait(moveRCMTicks*33.33/speed, msec);
-      } else {
-        wait(moveLCMTicks*33.33/speed, msec);
-      }
-
-      if (ticksLCM == lastTicksLCM) {
-        LCMotorNotMoved++;
-        if (LCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-          // LeftClawMotor has not moved for max retries times. Break out of while loop
-          break;
-        }
-      } else {
-        // reset the value of LCMotorNotMoved
-        LCMotorNotMoved = 0;
-        lastTicksLCM = ticksLCM;
-      } 
-
-      if (ticksRCM == lastTicksRCM) {
-        RCMotorNotMoved++;
-        if (RCMotorNotMoved >= MAX_CLAWS_RETRIES_BEFORE_BREAKING_FROM_LOOP) {
-          // RightClawMotor has not moved for max retries times. Break out of while loop
-          break;
-        }
-      } else {
-        // reset the value of LCMotorNotMoved
-        RCMotorNotMoved = 0;
-        lastTicksRCM = ticksRCM;
-      }
-    }
-    // We are done moving the claws
-}
-
 
 void moveArms(float degrees, int speed, int direction)
 {
@@ -644,6 +652,8 @@ void pre_auton(void) {
   while (GyroSensor.isCalibrating()) {
     wait(100, msec);
   }
+  GyroSensor.setHeading(0, degrees);
+  
   Controller1.Screen.print("GyroSensor Calibrated");   
 
   // All activities that occur before the competition starts
@@ -670,7 +680,7 @@ void autonomous(void) {
   // VEXcode device constructors
   motor RightFrontBaseMotor = motor(PORT9, ratio18_1, false);
   motor LeftFrontBaseMotor = motor(PORT10, ratio18_1, false);
-  motor LeftDriveSmart = motor(PORT2, ratio18_1, false);
+  motor LeftDriveSmart = motor(PORT8, ratio18_1, false);
   motor RightDriveSmart = motor(PORT1, ratio18_1, true);
  
   //drivetrain Drivetrain = drivetrain(LeftFrontBaseMotor, RightFrontBaseMotor, 319.19, 295, 130, mm, 1);
@@ -680,21 +690,30 @@ void autonomous(void) {
 
   // 0. 1 point Auton 
  
-  RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
+  moveRobot(20,50,1);
+  //RightFrontBaseMotor.rotateFor(-1500,vex::rotationUnits::raw,false);
+  //LeftFrontBaseMotor.rotateFor(1500,vex::rotationUnits::raw,true);
+
+  LeftClawMotor.spinFor(reverse, 90 ,degrees);
 
   wait(1, timeUnits::sec);
+
+  startSpinningClaws(100, 1);
+  wait(3, sec);
+  stopSpinningClaws();
+  moveRobot(20,50,-1);
+
+  //RightFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,false);
+  //LeftFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,true);
  
-  RightFrontBaseMotor.rotateFor(-1100,vex::rotationUnits::raw,false);
-  LeftFrontBaseMotor.rotateFor(1100,vex::rotationUnits::raw,true);
- 
+ /*
   wait(1, timeUnits::sec);
  
   ArmMotor.setVelocity(100, velocityUnits::pct); 
   ArmMotor.rotateFor(400, vex::rotationUnits::deg);
   moveClaws(200,100, -1);
   ArmMotor.rotateFor(-400, vex::rotationUnits::deg);
-
+*/
   
 
 }

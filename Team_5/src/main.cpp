@@ -678,19 +678,10 @@ void pre_auton(void) {
 /*  You must modify the code to add your own robot specific commands here.   */
 /*---------------------------------------------------------------------------*/
 
-void autonomous(void) {
-  
+void autonomous(void) { 
   // ..........................................................................
   setStartingPosition();
   startSpinningClaws(-1, 100);
-
-  // Pick up the pre-load
-  //wait(WAIT_FOR_CUBE_INTAKE, sec);
-
-  // waits for the Inertial Sensor to calibrate
-  /*while (GyroSensor.isCalibrating()) {
-    wait(100, msec);
-  }*/
   
   moveRobot(12,50,1);
   moveRobot(6,25,1); 
@@ -713,13 +704,10 @@ void autonomous(void) {
   moveRobot(22,75,-1);
   turnRobot(105,15,1);
   moveRobot(14.5,50,1);
-
+  //Stack the Cubes
   moveStacker(500, 50, 1);
-  //moveClaws(60,50,-1);
   moveStacker(140, 20, 1);
-
   moveRobot(8,25,-1);
-
   // ..........................................................................
 
   // An instance of brain used for printing to the V5 Brain screen

@@ -13,6 +13,7 @@ extern motor LeftFrontMotor;
 extern motor RightFrontMotor;
 extern motor LeftBackMotor;
 extern motor RightBackMotor;
+extern bumper BumperA;
 
 /**
  * Used to initialize code/tasks/devices added using tools in VEXcode Text.

@@ -848,16 +848,28 @@ void pre_auton(void) {
 void autonomous(void) {
   
   // ..........................................................................
+  moveRobot(20,50,1);
+
+  LeftClawMotor.spinFor(reverse, 180, degrees);  
+
+  wait(1, sec);
+
+  startSpinningClaws(1, 100);
+  wait(2, sec);
+  stopSpinningClaws();
+  
+  turnRobotHeading(-90,25);
   setStartingPosition();
 
+ /*
   startSpinningClaws(-1, 100);
 
   // Pick up the pre-load
   //wait(WAIT_FOR_CUBE_INTAKE, sec);
   
-  //moveRobot(12,50,1);
-  startMovingRobot(30, 1);
-
+  moveRobot(12,50,1);
+  //startMovingRobot(30, 1);
+*/
   /*for (int i = 0; i < 3; i++){
     moveRobot(6,25,1);
     // Pick up cubes #1, #2 & #3
@@ -869,12 +881,13 @@ void autonomous(void) {
   // Pick up cube #4
   wait(WAIT_FOR_CUBE_INTAKE, sec);
   */
+  /*
   wait(3700, msec);
   stopMovingRobot();
   wait(400, msec);
   stopSpinningClaws();
   turnRobotHeading(83,20);
-
+*/
 /*
   LeftFrontMotor.setVelocity(15, percent);
   LeftBackMotor.setVelocity(15, percent);
@@ -900,7 +913,7 @@ void autonomous(void) {
       notDoneA=false;
     } 
   }
-  */
+  
 
   startSideDrive(1,100);
   wait(2200, msec);
@@ -931,13 +944,14 @@ void autonomous(void) {
       bumperStopped = true;
     }
   }
+  */
   /*
   LeftFrontMotor.stop();
   RightFrontMotor.stop();
   LeftBackMotor.stop();
   RightBackMotor.stop();
   */
-  
+  /*
   startSpinningClaws(1, 10);
 
   moveStacker(200, 75, 1);
@@ -952,7 +966,7 @@ void autonomous(void) {
   wait(0.8, sec);
   moveRobot(8,100,-1);
   stopSpinningClaws();
-
+*/
 /*
   // Move backward to goal
   moveRobot(22,75,-1);
