@@ -1074,7 +1074,7 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   startMovingRobot(30, 1);
 
   // Keep moving for 3 seconds
-  wait(3000, msec);
+  wait(2500, msec);
 
   // Stop moving. Intake is complete
   stopMovingRobot();
@@ -1087,7 +1087,7 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
   // Now, head backward (sideways) to the fence
   startSideDrive(1,100);
-  wait(2300, msec);
+  wait(2000, msec);
   stopSideDrive();
 
   // Move cautiously forward until the robot hits the bumper sensor
@@ -1130,11 +1130,11 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   stopSpinningClaws();
 
   // Move the stacker back to unblock the claws
-  moveStacker(300, 100, -1);
+  moveStacker(400, 100, -1);
   
   // Begin the out-take process to keep the cube in the stack
   startSpinningClaws(1,100);
-  wait(450, msec);
+  wait(500, msec);
 
   // Move the robot back by 5 inches
   moveRobot(5,100,-1);
