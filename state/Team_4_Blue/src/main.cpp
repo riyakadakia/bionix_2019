@@ -1085,11 +1085,10 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   wait(WAIT_FOR_CUBE_INTAKE, sec);
   */
 
-  wait(3700, msec);
+  wait(3000, msec);
   stopMovingRobot();
-  wait(400, msec);
   stopSpinningClaws();
-  turnRobotHeading(83,20);
+  turnRobotHeading(-83,20);
 
 /*
   LeftFrontMotor.setVelocity(15, percent);
@@ -1118,8 +1117,8 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   }
   */
 
-  startSideDrive(1,100);
-  wait(2200, msec);
+  startSideDrive(-1,100);
+  wait(2300, msec);
   stopSideDrive();
 
   LeftFrontMotor.setVelocity(15, percent);

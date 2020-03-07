@@ -1063,65 +1063,34 @@ void autonomous(void) {
 std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
   // ..........................................................................
+  
+  // Open the stacker and the back wheels
   setStartingPosition();
 
+  // Kickoff the cube intake claws
   startSpinningClaws(-1, 100);
 
-  // Pick up the pre-load
-  //wait(WAIT_FOR_CUBE_INTAKE, sec);
-  
-  //moveRobot(12,50,1);
+  // Move the robot forward at the speed of 30%
   startMovingRobot(30, 1);
 
-  /*for (int i = 0; i < 3; i++){
-    moveRobot(6,25,1);
-    // Pick up cubes #1, #2 & #3
-    wait(WAIT_FOR_CUBE_INTAKE,sec); 
-  }
-  //wait(600, msec);
-  moveRobot(9,25,1);
+  // Keep moving for 3 seconds
+  wait(3000, msec);
 
-  // Pick up cube #4
-  wait(WAIT_FOR_CUBE_INTAKE, sec);
-  */
-
-  wait(3700, msec);
+  // Stop moving. Intake is complete
   stopMovingRobot();
-  wait(400, msec);
+
+  // Stop the intake claws
   stopSpinningClaws();
-  turnRobotHeading(83,20);
 
-/*
-  LeftFrontMotor.setVelocity(15, percent);
-  LeftBackMotor.setVelocity(15, percent);
-  RightFrontMotor.setVelocity(15, percent);
-  RightBackMotor.setVelocity(15, percent); 
-  RightBackMotor.spin(forward); 
-  RightFrontMotor.spin(forward); 
-  LeftFrontMotor.spin(forward);
-  LeftBackMotor.spin(forward);
-  
-  bool notDoneH=true;
-  bool notDoneA=true;
-  //waitUntil(BumperH.pressing()|| BumperA.pressing());
-  while (notDoneH || notDoneA){
-    if(notDoneH && BumperH.pressing()){
-      LeftFrontMotor.stop();
-      LeftBackMotor.stop();
-      notDoneH=false;
-    }
-   if(notDoneA && BumperA.pressing()){
-      RightFrontMotor.stop();
-      RightBackMotor.stop();
-      notDoneA=false;
-    } 
-  }
-  */
+  // Turn the robot by 80 degrees at speed of 20%
+  turnRobotHeading(80,20);
 
+  // Now, head backward (sideways) to the fence
   startSideDrive(1,100);
-  wait(2200, msec);
+  wait(2300, msec);
   stopSideDrive();
 
+  // Move cautiously forward until the robot hits the bumper sensor
   LeftFrontMotor.setVelocity(15, percent);
   RightFrontMotor.setVelocity(15, percent);
   LeftBackMotor.setVelocity(15, percent);
@@ -1148,62 +1117,35 @@ std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     }
   }
 
-  /*
-  LeftFrontMotor.stop();
-  RightFrontMotor.stop();
-  LeftBackMotor.stop();
-  RightBackMotor.stop();
-  */
-  
-
-  // moveStacker(400, 100, 1); // XXX DELETE ME
-
+  // Now begin the out-take process
   startSpinningClaws(1, 10);
+
+  // Move the stacker up quickly upto 200 degrees at 100% speed
   moveStacker(200, 100, 1);
+
+  // Move the stacker cautiously for the next 150 degrees at 25% speed
   moveStacker(150, 25, 1);
+
+  // Out-take complete
   stopSpinningClaws();
 
-  //StackerMotor.setVelocity(100, percent);
-  //StackerMotor.rotateFor(-400, vex::rotationUnits::deg, false);
-
+  // Move the stacker back to unblock the claws
   moveStacker(300, 100, -1);
+  
+  // Begin the out-take process to keep the cube in the stack
   startSpinningClaws(1,100);
   wait(450, msec);
+
+  // Move the robot back by 5 inches
   moveRobot(5,100,-1);
+
+  // Stop the out-take process
   stopSpinningClaws();
 
 std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
 logTextClearScreen("Time");
 logText("E: ", (double)std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count());
-
-/*
-  // Move backward to goal
-  moveRobot(22,75,-1);
-  turnRobot(115,15,1);
-  moveRobot(13,50,1);
-  */
-
-  /*// Move backward to goal
-  LeftFrontMotor.setVelocity(100, velocityUnits::pct);
-  RightFrontMotor.setVelocity(100, velocityUnits::pct);
-  LeftBackMotor.setVelocity(100, velocityUnits::pct);
-  RightBackMotor.setVelocity(100, velocityUnits::pct);
-
-  LeftFrontMotor.spin(reverse);
-  RightFrontMotor.spin(reverse);
-  LeftBackMotor.spin(reverse);
-  RightBackMotor.spin(reverse);
-
-  wait(3, sec);
-
-  LeftBackMotor.spin(forward);
-  LeftFrontMotor.spin(forward);
-  RightFrontMotor.spin(reverse);
-  RightBackMotor.spin(reverse);
-
-  wait(1, sec);
-*/
 
 }
 
